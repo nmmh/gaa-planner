@@ -19,7 +19,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 #app{max-width:640px;margin:0 auto;padding:0 12px 96px}
 header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 2px 8px;display:flex;align-items:center;gap:10px}
-header h1{font-family:"Barlow Condensed",sans-serif;font-size:24px;margin:0;letter-spacing:.3px;flex:1;line-height:1}
+header h1{font-family:"Barlow Condensed",sans-serif;font-size:22px;white-space:nowrap;margin:0;letter-spacing:.3px;flex:1;line-height:1}
 header h1 span{color:var(--pitch)}
 .pill{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:#e6ebe2;color:var(--muted);white-space:nowrap}
 .pill.live{background:#dff2e5;color:#17663a}
@@ -117,6 +117,13 @@ textarea{min-height:120px;resize:vertical}
 .mvrow .txt{font-size:13.5px;color:var(--muted)}
 .undo{border:0;background:#eef2ea;border-radius:8px;padding:5px 9px;font-size:12.5px;font-weight:700;color:var(--muted)}
 .ver{text-align:center;font-size:12px;color:var(--muted);padding:14px 0 4px}.ver a{color:var(--muted)}
+.sharebtn{border:0;background:#e6ebe2;color:var(--pitch);width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.menuitem{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:#f4f6f1;border-radius:12px;padding:12px;margin:0 0 8px}
+.mi-ic{font-size:22px;width:30px;text-align:center}
+.addbox{background:#f6f8f3;border-radius:12px;padding:12px;margin:0 0 12px}
+.addbox .lbl:first-child{margin-top:0}
+.iconbtn.on4{background:#d7ecf0;color:#1d6273}
+.iconbtn{min-width:36px}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -166,7 +173,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
-const APP_VERSION='v1.1',REPO_URL='https://github.com/nmmh/gaa-planner';
+const APP_VERSION='v1.2',REPO_URL='https://github.com/nmmh/gaa-planner';
 let commitInfo=null;
 function verHtml(){
   if(commitInfo)return `<a href="${commitInfo.url}" target="_blank" rel="noopener">${APP_VERSION} · ${commitInfo.sha}</a> · ${commitInfo.date} · <a href="${REPO_URL}/commits/main" target="_blank" rel="noopener">history</a>`;
@@ -198,7 +205,7 @@ function periodName(i,a,b,M){return isQuarters(M)?'Q'+(i+1):(fm(a)+'–'+fm(b)+"
 
 function defaultMatch(){
   return {opp:'',date:'',size:15,form:DEFAULT_FORM[15].slice(),half:25,subs:6,windows:[12.5,25,37.5],rolling:true,
-    present:{},anchor:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{}};
+    present:{},anchor:{},lock:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{}};
 }
 function autoWindows(T,S){
   if(S<=0)return [];
@@ -217,7 +224,7 @@ function normPanel(p){
 function normMatch(m){
   const d=defaultMatch();m=m&&typeof m==='object'?JSON.parse(JSON.stringify(m)):{};
   const o=Object.assign(d,m);
-  ['present','anchor','benchStart','late','injured','done','rsvp'].forEach(k=>{if(!o[k]||typeof o[k]!=='object'||Array.isArray(o[k]))o[k]={};});
+  ['present','anchor','lock','benchStart','late','injured','done','rsvp'].forEach(k=>{if(!o[k]||typeof o[k]!=='object'||Array.isArray(o[k]))o[k]={};});
   if(!Array.isArray(o.form)||o.form.length!==6)o.form=DEFAULT_FORM[15].slice();
   o.form=o.form.map(n=>Math.max(0,Math.min(6,+n||0)));
   o.form[0]=Math.min(1,o.form[0]);
@@ -300,7 +307,7 @@ function simulate(){
   present.forEach(p=>{mins[p.id]=0;st[p.id]=lateAt(p.id)>0?'late':'bench';const i=injAt(p.id);if(i!==null&&i<=0)st[p.id]='out';});
   field.forEach(p=>{if(p)st[p.id]='field';});
   let hist=null;let used=0;
-  const moveBad={};
+  const moveBad={},home={};
   const setSlot=(si,p,t,kind)=>{const h=hist[si];if(h.length)h[h.length-1].to=t;field[si]=p;if(p)h.push({p,from:t,to:T,kind:kind||'sub'});};
   const place=(si,p,t,kind)=>{if(t===0)field[si]=p;else setSlot(si,p,t,kind);};
   // manual changes (drag/tap on the pitch) at time t
@@ -314,16 +321,31 @@ function simulate(){
       if(ai>=0&&bi>=0){ // both on the pitch: position change
         if(b){place(ai,b,t,'move');place(bi,a,t,'move');}else{place(ai,null,t);place(bi,a,t,'move');}
         entry.items.push({kind:'move',a,b,aTo:slots[bi],bTo:b?slots[ai]:null,mid:m.id});
+        if(M.lock[a.id]&&t>0)home[a.id]=bi;if(b&&M.lock[b.id]&&t>0)home[b.id]=ai;
       }else{ // one on, one off: manual sub
         const fp=ai>=0?a:b,bp=ai>=0?b:a,si=ai>=0?ai:bi;
         place(si,bp,t,'manual');st[bp.id]='field';if(fp){st[fp.id]='bench';subbedOff.add(fp.id);}if(t>0)used++;
         entry.items.push({kind:'msub',on:bp,off:fp,slot:slots[si],mid:m.id});
+        if(M.lock[bp.id]&&t>0)home[bp.id]=si;
       }
     });
   };
   const startEntry={t:0,items:[],window:false};
   applyMoves(0,startEntry);
   const starters=field.slice();
+  // ⚓ locked players keep the position they start in (or first come on in)
+  field.forEach((p,si)=>{if(p&&M.lock[p.id])home[p.id]=si;});
+  const relocate=(b,si,t,entry)=>{
+    if(!M.lock[b.id])return;
+    if(home[b.id]===undefined){home[b.id]=si;return;}
+    const h=home[b.id];if(h===si||field[si]!==b)return;
+    const o=field[h];
+    if(o&&M.lock[o.id]&&home[o.id]===h)return; // another locked player owns it
+    const kind=hist[si].length?hist[si][hist[si].length-1].kind:'sub';
+    setSlot(h,b,t,kind);setSlot(si,o,t,'move');
+    entry.items.forEach(it=>{if(it.on===b&&it.slot===slots[si])it.slot=slots[h];});
+    if(o)entry.items.push({kind:'move',a:o,b:null,aTo:slots[si],bTo:null,auto:true});
+  };
   hist=slots.map((s,i)=>field[i]?[{p:field[i],from:0,to:T,kind:'start'}]:[]);
   const windows=[...new Set(M.windows.filter(t=>t>0&&t<T))].sort((a,b)=>a-b);
   const nw=Math.max(1,windows.length);
@@ -354,7 +376,7 @@ function simulate(){
         let best=null;benchPool(new Set()).forEach(b=>{const v=3*fit(b,slots[si])-mins[b.id]/5+nz(b.id,'i'+t);if(!best||v>best.v)best={v,b};});
         if(best){setSlot(si,best.b,t);st[best.b.id]='field';used++;const over=!M.equal&&used>M.subs;if(over)overLimit=true;
           hist[si][hist[si].length-1].kind='inj';
-          entry.items.push({kind:'inj',on:best.b,off:p,slot:slots[si],over});}
+          entry.items.push({kind:'inj',on:best.b,off:p,slot:slots[si],over});relocate(best.b,si,t,entry);}
         else{setSlot(si,null,t);entry.items.push({kind:'short',off:p,slot:slots[si]});}
       }else{st[p.id]='out';entry.items.push({kind:'injbench',p});}
     });
@@ -369,8 +391,9 @@ function simulate(){
       const ranked=cands.filter(p=>!fieldAnch.includes(p)).sort((a,b)=>prio(b)-prio(a));
       const chosen=new Set(ranked.slice(0,rotSlots.length).map(p=>p.id));
       let inc=ranked.filter(p=>chosen.has(p.id)&&st[p.id]==='bench');
-      const doSwap=(si,b,f)=>{setSlot(si,b,t);st[b.id]='field';if(f){st[f.id]='bench';subbedOff.add(f.id);}used++;
-        entry.items.push(f?{kind:'sub',on:b,off:f,slot:slots[si]}:{kind:'fill',on:b,slot:slots[si]});};
+      const justOnE=new Set();
+      const doSwap=(si,b,f)=>{setSlot(si,b,t);st[b.id]='field';if(f){st[f.id]='bench';subbedOff.add(f.id);}used++;justOnE.add(b.id);
+        entry.items.push(f?{kind:'sub',on:b,off:f,slot:slots[si]}:{kind:'fill',on:b,slot:slots[si]});relocate(b,si,t,entry);};
       // fill empty positions first
       field.forEach((p,si)=>{if(p||!inc.length)return;let best=null;inc.forEach(b=>{const v=fit(b,slots[si]);if(!best||v>best.v)best={v,b};});inc=inc.filter(x=>x!==best.b);doSwap(si,best.b,null);});
       if(inc.length){
@@ -381,7 +404,7 @@ function simulate(){
         inc.sort((a,b)=>prio(b)-prio(a));
         for(const b of inc){
           let best=null;
-          pool.forEach(si=>{if(slots[si].line===0&&!(b.lines||[]).includes(0))return;
+          pool.forEach(si=>{if(!field[si]||justOnE.has(field[si].id)||M.anchor[field[si].id])return;if(slots[si].line===0&&!(b.lines||[]).includes(0))return;
             const v=3*fit(b,slots[si])-0.4*(prio(field[si])-thr);if(!best||v>best.v)best={v,si};});
           if(!best)continue;
           pool=pool.filter(x=>x!==best.si);doSwap(best.si,b,field[best.si]);
@@ -411,7 +434,7 @@ function simulate(){
         if(!swap)break;
         setSlot(swap.si,swap.b,t);st[swap.b.id]='field';st[swap.f.id]='bench';
         subbedOff.add(swap.f.id);justOn.add(swap.b.id);justOff.add(swap.f.id);
-        entry.items.push({kind:'sub',on:swap.b,off:swap.f,slot:slots[swap.si]});done++;used++;
+        entry.items.push({kind:'sub',on:swap.b,off:swap.f,slot:slots[swap.si]});done++;used++;relocate(swap.b,swap.si,t,entry);
       }
       carry=Math.max(0,per[wi]+carry-done);
     }
@@ -467,7 +490,7 @@ async function flush(which){
 }
 function setSync(s){if(ui.sync===s)return;ui.sync=s;const el=$('#sync');if(el)el.outerHTML=syncPill();}
 function syncPill(){
-  const m={local:['','Saved on this phone'],live:['live','● Shared live'],readonly:['warn','View only'],error:['warn','Not syncing'],loading:['','Connecting…']}[ui.sync]||['',''];
+  const m={local:['','On this phone'],live:['live','● Shared live'],readonly:['warn','View only'],error:['warn','Not syncing'],loading:['','Connecting…']}[ui.sync]||['',''];
   return `<span id="sync" class="pill ${m[0]}">${m[1]}</span>`;
 }
 async function initDb(){
@@ -508,7 +531,7 @@ document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pend
 function render(){
   if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
   const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
-  $('#app').innerHTML=`<header><h1>GAA <span>Sub Planner</span></h1>${syncPill()}</header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
+  $('#app').innerHTML=`<header><h1>GAA <span>Sub Planner</span></h1>${syncPill()}<button class="sharebtn" data-a="shareMenu" aria-label="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
 }
 function navView(){
   const pc=state.panel.players.length;
@@ -534,23 +557,32 @@ function sortedPlayers(){
 
 function panelView(){
   const ps=sortedPlayers();
-  let h=`<div class="card"><h2>Add a player</h2>
-    <input type="text" id="addName" data-f="addName" placeholder="Name" value="${esc(ui.addName)}" autocomplete="off">
-    <div class="lbl" style="margin-top:12px">Usually plays (tap all that apply)</div>
-    <div class="chips">${lineChips(ui.addLines,'addLine')}</div>
-    <div class="lbl">Side</div>
-    <div class="chips">${sideChips(ui.addSide,'addSide')}</div>
-    <button class="btn wide" style="margin-top:14px" data-a="addPlayer">Add to panel</button>
-    <details style="margin-top:14px" ${ui.bulkOpen?'open':''}><summary data-a="bulkToggle">Paste a whole list instead</summary>
-      <p class="small muted">One player per line: <b>Name, positions, side</b>. e.g.<br>Seán Murphy, HF MID, L<br>Cian Byrne, goalkeeper<br>Oisín Kelly, half back full back, R</p>
-      <textarea data-f="bulk" placeholder="Paste names here">${esc(ui.bulk)}</textarea>
-      <button class="btn wide" style="margin-top:8px" data-a="bulkAdd">Add these players</button>
-    </details>
-  </div>`;
-  h+=`<div class="card"><h2>Panel <span class="muted small">${ps.length} players</span><span class="sp"></span>${ps.length?'<button class="btn alt sm" data-a="copyPanel">Copy list</button>':''}</h2>`;
+  const noPos=ps.filter(p=>!(p.lines||[]).length).length;
+  let h=`<div class="card"><h2>Panel <span class="muted small">${ps.length} player${ps.length===1?'':'s'}</span><span class="sp"></span><button class="btn sm ${ui.addOpen?'alt':''}" data-a="addOpen">${ui.addOpen?'Done':'+ Add player(s)'}</button></h2>`;
+  if(ui.addOpen){
+    h+=`<div class="addbox">
+      <div class="lbl">Add one player</div>
+      <input type="text" id="addName" data-f="addName" placeholder="Name" value="${esc(ui.addName)}" autocomplete="off">
+      <div class="lbl" style="margin-top:10px">Usually plays (tap all that apply)</div>
+      <div class="chips">${lineChips(ui.addLines,'addLine')}</div>
+      <div class="lbl">Side</div>
+      <div class="chips">${sideChips(ui.addSide,'addSide')}</div>
+      <button class="btn wide" style="margin-top:12px" data-a="addPlayer">Add to panel</button>
+      <div class="lbl" style="margin-top:18px">Or import a ClubZap RSVP report</div>
+      <label class="btn alt wide" style="display:block;text-align:center">Choose RSVP report (.csv)<input type="file" accept=".csv,text/csv,text/plain" data-f="rsvpPanel" hidden></label>
+      <p class="small muted" style="margin:6px 0 0">Adds anyone not already on the panel — nobody is removed.</p>
+      ${ui.panelMsg?`<div class="warnbox" style="margin-bottom:0">${ui.panelMsg}</div>`:''}
+      <details style="margin-top:14px" ${ui.bulkOpen?'open':''}><summary data-a="bulkToggle">Or paste a list of names</summary>
+        <p class="small muted">One player per line: <b>Name, positions, side</b>. e.g.<br>Seán Murphy, HF MID, L<br>Cian Byrne, goalkeeper</p>
+        <textarea data-f="bulk" placeholder="Paste names here">${esc(ui.bulk)}</textarea>
+        <button class="btn wide" style="margin-top:8px" data-a="bulkAdd">Add these players</button>
+      </details>
+    </div>`;
+  }
   if(!ps.length){
-    h+=`<div class="empty-state"><div class="big">No players yet</div>Import a ClubZap RSVP report or add players above.<br><br><button class="btn alt sm" data-a="sample">Load a sample squad</button> to try it out.</div>`;
+    h+=`<div class="empty-state"><div class="big">No players yet</div>Tap <b>+ Add player(s)</b> to add them or import a ClubZap RSVP report.<br><br><button class="btn alt sm" data-a="sample">Load a sample squad</button> to try it out.</div>`;
   }else{
+    if(noPos)h+=`<div class="small muted" style="margin:0 0 4px">${noPos} without a position — tap ✎ to set where they play.</div>`;
     h+='<ul class="plist">'+ps.map(p=>{
       const open=ui.editing===p.id;
       let r=`<li><div class="prow"><span class="nm">${esc(p.name)}</span>${posTags(p)}<button class="iconbtn" data-a="edit" data-id="${p.id}" aria-label="Edit">${open?'✓':'✎'}</button></div>`;
@@ -565,16 +597,7 @@ function panelView(){
       return r+'</li>';
     }).join('')+'</ul>';
   }
-  h+='</div>';
-  h+=`<div class="card"><h2>Import from ClubZap</h2><p class="small muted" style="margin-top:0">Pick an RSVP report (.csv). Adds anyone not already on the panel — nobody is removed.</p>
-    <label class="btn alt wide" style="display:block;text-align:center">Choose RSVP report<input type="file" accept=".csv,text/csv,text/plain" data-f="rsvpPanel" hidden></label>
-    ${ui.panelMsg?`<div class="warnbox" style="margin-bottom:0">${ui.panelMsg}</div>`:''}</div>`;
-  h+=syncCard();
-  return h;
-}
-function syncCard(){
-  return `<div class="card"><h2>Share with other mentors</h2><p class="small muted" style="margin-top:0">Send a link that loads this whole setup — panel, who's here, formation and subs — on another phone.</p>
-    <div class="row"><button class="btn grow" data-a="send">📲 Send to another phone</button><button class="btn alt" data-a="pasteOpen">Load from a link</button></div></div>`;
+  return h+'</div>';
 }
 
 function rsvpTag(c){return c==='A'?'<span class="tag" style="background:#dff2e5;color:#17663a">RSVP ✓</span>':c==='X'?'<span class="tag" style="background:#fbe1dc;color:#a8321f">not coming</span>':'<span class="tag" style="background:#eceee9;color:#7a857c">no reply</span>';}
@@ -590,7 +613,7 @@ function formationControl(){
 function subPlanControl(full){
   const M=state.match;
   let h=`<div class="lbl">Sub plan</div><div class="seg"><button class="${M.equal?'on':''}" data-a="mode" data-v="eq">Equal time</button><button class="${M.equal?'':'on'}" data-a="mode" data-v="fixed">Set no. of subs</button></div>
-  <div class="small muted" style="margin-top:6px">${M.equal?'Everyone except ⚓ anchors gets about the same minutes. No limit on subs.':'Makes at most the number of subs you set, spreading minutes as evenly as it can.'}</div>`;
+  <div class="small muted" style="margin-top:6px">${M.equal?'Everyone except © core players gets about the same minutes. No limit on subs.':'Makes at most the number of subs you set, spreading minutes as evenly as it can.'}</div>`;
   if(full&&!M.equal)h+=`<div class="row" style="margin-top:10px"><div><div class="lbl" style="margin-top:0">Subs allowed</div>${stepper('subs',M.subs)}</div></div>
     <button class="toggle" data-a="rolling" style="margin-top:6px"><span class="sw-ui ${M.rolling?'on':''}"></span><span><b>Players can come back on</b></span></button>`;
   return h;
@@ -621,14 +644,15 @@ function matchView(){
         <button class="btn wide" style="margin-top:8px" data-a="availApply">Tick these players</button>
         ${ui.availMsg?`<div class="warnbox" style="margin-bottom:0">${ui.availMsg}</div>`:''}
       </details>
-      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. ⚓ plays the whole match · <b>B</b> starts on the bench · ⏱ late or injured.</p>`;
+      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. <b>©</b> core — plays the whole match · <b>⚓</b> stays in one position · <b>B</b> starts on the bench · <b>⏱</b> late or injured.</p>`;
   if(!ps.length)h+=`<div class="empty-state">Add players on the Panel tab first.</div>`;
   ps.forEach(p=>{
     const on=!!M.present[p.id];
     const timed=M.late[p.id]||(M.injured[p.id]!==undefined&&M.injured[p.id]!=='');
     h+=`<div class="att ${on?'':'absent'}"><button class="who" data-a="present" data-id="${p.id}"><span class="tick ${on?'on':''}">${on?'✓':''}</span><span class="grow" style="min-width:0"><span class="nm" style="display:block">${esc(p.name)}</span>${on||M.rsvp[p.id]?`<span class="small" style="display:block;margin-top:2px">${M.rsvp[p.id]?rsvpTag(M.rsvp[p.id])+' ':''}${on?posTags(p):''}</span>`:''}</span></button>
       ${on?`
-      <button class="iconbtn ${M.anchor[p.id]?'on':''}" data-a="anchor" data-id="${p.id}" aria-label="Plays full match">⚓</button>
+      <button class="iconbtn ${M.anchor[p.id]?'on':''}" data-a="anchor" data-id="${p.id}" aria-label="Core: plays the full match">©</button>
+      <button class="iconbtn ${M.lock[p.id]?'on4':''}" data-a="lock" data-id="${p.id}" aria-label="Stays in one position">⚓</button>
       <button class="iconbtn ${M.benchStart[p.id]?'on2':''}" data-a="bench" data-id="${p.id}" aria-label="Start on bench">B</button>
       <button class="iconbtn ${timed?'on3':''}" data-a="timing" data-id="${p.id}" aria-label="Late or injured">⏱</button>`:''}</div>`;
     if(on&&ui.timing===p.id){
@@ -638,7 +662,7 @@ function matchView(){
   });
   h+=`</div>`;
   if(ps.length)h+=`<button class="btn acc wide" data-a="tab" data-v="plan" style="margin:6px 0 10px">See the plan ▶</button>`;
-  h+=`<div class="card"><h2>New match</h2><p class="small muted" style="margin-top:0">Clears attendance, anchors, late/injured and ticks. Keeps the panel and settings.</p>
+  h+=`<div class="card"><h2>New match</h2><p class="small muted" style="margin-top:0">Clears attendance, ©/⚓ marks, late/injured and ticks. Keeps the panel and settings.</p>
     ${ui.confirmReset?`<div class="row"><span class="grow small">Clear everything for a new match?</span><button class="btn alt sm" data-a="resetNo">Cancel</button><button class="btn warn sm" data-a="resetYes">Clear</button></div>`:`<button class="btn alt" data-a="reset">Start a new match</button>`}</div>`;
   return h;
 }
@@ -659,7 +683,7 @@ function planView(){
     <div class="stat"><b>${bench0.length+late.length}</b><span>on bench</span></div>
     <div class="stat"><b>${M.equal?subsPlanned:subsPlanned+'/'+M.subs}</b><span>${M.equal?'subs needed':'subs used'}</span></div>
     <div class="stat"><b>${P.timeline.filter(e=>e.window).length}</b><span>windows</span></div>
-    <div class="stat"><b>${Object.keys(M.anchor).filter(id=>M.present[id]).length}</b><span>anchors</span></div></div>`;
+    <div class="stat"><b>${Object.keys(M.anchor).filter(id=>M.present[id]).length}</b><span>core</span></div></div>`;
   if(P.warnings.length)h+=`<div class="warnbox">${P.warnings.map(w=>`<div>⚠️ ${w}</div>`).join('')}</div>`;
   // pitch for the chosen period
   const vi=Math.min(ui.view||0,P.periods.length-1);const pr=P.periods[vi];
@@ -678,11 +702,11 @@ function planView(){
       }else if(seg&&seg.from===pr.a&&pr.a>0){
         chg=`<div class="chg ${seg.kind==='move'?'mv':seg.kind==='inj'?'inj':''}">${seg.kind==='move'?'↔ moved here':seg.kind==='manual'?'▲ on (your adjustment)':'▲ comes on'}</div>`;
       }
-      return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" data-a="pick" data-slot="${s.id}" data-dz="1"><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.anchor[p.id]?' <span class="anc">⚓</span>':''}</div>${chg}</div>`;
+      return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" data-a="pick" data-slot="${s.id}" data-dz="1"><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.anchor[p.id]?' <span class="anc">©</span>':''}${p&&M.lock[p.id]?' <span class="anc">⚓</span>':''}</div>${chg}</div>`;
     }).join('')+`</div>`;
   });
   h+=`<div class="benchStrip"><div class="lineTag" style="margin-top:4px">Bench · ${periodName(vi,pr.a,pr.b,M)}</div><div class="lineRow" style="flex-wrap:wrap">${pr.off.map(p=>`<div class="bchip ${selKey==='p'+p.id?'sel':''}" data-a="pick" data-pid="${p.id}" data-dz="1">${esc(shortName(p.name))}</div>`).join('')||'<span style="color:rgba(255,255,255,.7);font-size:13px">Nobody — all on</span>'}${pr.notYet.map(p=>`<div class="bchip late">${esc(shortName(p.name))} · late</div>`).join('')}</div></div>`;
-  h+=`</div><div class="legend"><span><b style="color:var(--on)">20' Name</b> = comes on</span><span><b style="color:var(--muted)">↔</b> = your position change</span><span>⚓ full match</span><span>Red outline = out of usual position</span></div>`;
+  h+=`</div><div class="legend"><span><b style="color:var(--on)">20' Name</b> = comes on</span><span><b style="color:var(--muted)">↔</b> = position change</span><span>© core (full match)</span><span>⚓ stays in position</span><span>Red outline = out of usual position</span></div>`;
   // who sits out each period
   h+=`<div class="card"><h2>Off each ${isQuarters(M)?'quarter':'period'}</h2><ul class="tl">`+P.periods.map((pr,i)=>`<li><div class="t" style="font-size:20px">${periodName(i,pr.a,pr.b,M)}</div><div class="grow" style="padding-top:2px">${pr.off.length?pr.off.map(p=>`<span class="tag" style="font-size:14px;padding:4px 8px;margin:0 4px 4px 0;display:inline-block">${esc(shortName(p.name))}</span>`).join(''):'<span class="muted small">Nobody — all on</span>'}${pr.notYet.length?`<div class="small muted">Not here yet: ${pr.notYet.map(p=>esc(shortName(p.name))).join(', ')}</div>`:''}</div></li>`).join('')+`</ul></div>`;
   // timeline
@@ -723,14 +747,21 @@ function planView(){
   }
   // minutes
   const rows=P.present.filter(p=>P.st[p.id]!==undefined).slice().sort((a,b)=>P.mins[b.id]-P.mins[a.id]||a.name.localeCompare(b.name));
-  h+=`<div class="card"><h2>Minutes</h2>`+rows.map(p=>`<div class="mbar"><span class="n">${M.anchor[p.id]?'⚓ ':''}${esc(p.name)}</span><span class="bar"><i class="${M.anchor[p.id]?'anc':''}" style="width:${Math.round(100*P.mins[p.id]/P.T)}%"></i></span><span class="m">${fm(P.mins[p.id])}'</span></div>`).join('')+`</div>`;
+  h+=`<div class="card"><h2>Minutes</h2>`+rows.map(p=>`<div class="mbar"><span class="n">${M.anchor[p.id]?'© ':''}${esc(p.name)}</span><span class="bar"><i class="${M.anchor[p.id]?'anc':''}" style="width:${Math.round(100*P.mins[p.id]/P.T)}%"></i></span><span class="m">${fm(P.mins[p.id])}'</span></div>`).join('')+`</div>`;
   return h;
 }
 
 function sheetView(){
   const S=ui.sheet;if(!S)return '';
   let body='';
-  if(S.mode==='paste'){
+  if(S.mode==='menu'){
+    const it=(a,ic,t,d)=>`<button class="menuitem" data-a="${a}"><span class="mi-ic">${ic}</span><span><b>${t}</b><br><span class="small muted">${d}</span></span></button>`;
+    body=it('send','📲','Send to another phone','A link that loads everything — panel, who\'s here, formation, subs')
+      +it('whatsapp','💬','Plan as WhatsApp text','Starting team, who\'s off each quarter, subs and minutes')
+      +it('copyPanel','📋','Panel list','Names and positions — paste into Add player(s) on another phone')
+      +it('pasteOpen','⬇️','Load from a link','Paste a link another mentor sent you')
+      +`<button class="btn alt wide" style="margin-top:8px" data-a="sheetClose">Close</button>`;
+  }else if(S.mode==='paste'){
     body=`<textarea id="sheetText" data-f="pasteCode" placeholder="Paste the link or code here">${esc(ui.pasteCode||'')}</textarea>
     <div class="row" style="margin-top:10px"><button class="btn grow" data-a="pasteLoad">Load it</button><button class="btn alt" data-a="sheetClose">Cancel</button></div>`;
   }else if(S.mode==='confirm'){
@@ -763,7 +794,7 @@ async function decodeState(code){
 async function sendToPhone(){
   const code=await encodeState();const link=shareBase()+'#s='+code;
   const M=state.match;const msg=`📋 ${M.opp?'vs '+M.opp+' – ':''}tap to load the full plan (panel, who's here, subs):\n${link}`;
-  ui.sheet={mode:'copy',title:'Send to another phone',noteHtml:'Send this link to the other mentors. Opening it loads <b>everything</b> — panel, attendance, anchors, formation and your changes — on their phone. Send a new link whenever you change something.',text:msg,wa:'https://wa.me/?text='+encodeURIComponent(msg)};
+  ui.sheet={mode:'copy',title:'Send to another phone',noteHtml:'Send this link to the other mentors. Opening it loads <b>everything</b> — panel, attendance, ©/⚓ marks, formation and your adjustments — on their phone. Send a new link whenever you change something.',text:msg,wa:'https://wa.me/?text='+encodeURIComponent(msg)};
   render();
 }
 async function offerImport(code){
@@ -821,7 +852,7 @@ function applyRSVP(r,toMatch){
   if(!toMatch)return `Panel: added ${added.length} new player${added.length===1?'':'s'}, ${r.people.length-added.length} already on it.`+(added.length?' Set their positions below.':'');
   M.present={};M.rsvp=ids;
   Object.keys(ids).forEach(id=>{if(ids[id]==='A')M.present[id]=true;});
-  ['anchor','benchStart','late','injured'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));
+  ['anchor','lock','benchStart','late','injured'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));
   M.moves=[];M.done={};
   if(r.opp)M.opp=r.opp;if(r.date)M.date=r.date;
   persist('match');
@@ -838,7 +869,7 @@ function whatsappText(){
   L.push(`${P.slots.length}-a-side · 2×${M.half} mins · ${P.present.length} here`);
   L.push('');L.push('*STARTING*');
   LINES.forEach((l,li)=>{const ss=P.slots.filter(s=>s.line===li);if(!ss.length)return;
-    L.push(`${l.short}: `+ss.map(s=>{const p=P.starters[s.id];return `${s.num} ${p?shortName(p.name)+(M.anchor[p.id]?' ⚓':''):'—'}`;}).join(' · '));});
+    L.push(`${l.short}: `+ss.map(s=>{const p=P.starters[s.id];return `${s.num} ${p?shortName(p.name)+(M.anchor[p.id]?' ©':'')+(M.lock[p.id]?' ⚓':''):'—'}`;}).join(' · '));});
   const bench0=P.avail0.filter(p=>!P.starters.includes(p));
   const late=P.present.filter(p=>P.lateAt(p.id)>0);
   L.push('');L.push('*BENCH*: '+([...bench0.map(p=>p.name),...late.map(p=>p.name+' (late '+P.lateAt(p.id)+"')")].join(', ')||'none'));
@@ -972,9 +1003,8 @@ document.addEventListener('touchmove',e=>{if(drag&&drag.started)e.preventDefault
 document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('[data-dz]'))e.preventDefault();});
 /* ---------- actions ---------- */
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1800);}
-async function copyText(text,title,note){
-  try{await navigator.clipboard.writeText(text);toast('Copied — paste it into WhatsApp');}
-  catch(e){ui.sheet={mode:'copy',title,note:note||'Select all and copy.',text};render();setTimeout(()=>{const ta=$('#sheetText');if(ta){ta.focus();ta.select();}},50);}
+function copyText(text,title,note){
+  ui.sheet={mode:'copy',title,note:note||'',text,wa:'https://wa.me/?text='+encodeURIComponent(text)};render();
 }
 function findP(id){return state.panel.players.find(p=>p.id===id);}
 function act(a,el){
@@ -991,13 +1021,13 @@ function act(a,el){
     case 'bulkAdd':{const ps=parseBulk(ui.bulk||'');if(!ps.length){toast('Nothing to add');return;}
       state.panel.players.push(...ps);ui.bulk='';ui.bulkOpen=false;persist('panel');toast(`Added ${ps.length} players`);break;}
     case 'sample':{const ps=parseBulk(SAMPLE);state.panel.players.push(...ps);persist('panel');toast('Sample squad loaded');break;}
-    case 'copyPanel':copyText(panelText(),'Panel list','Paste this into Paste a whole list on another phone, or keep it as a backup.');return;
+    case 'copyPanel':copyText(panelText(),'Panel list','On another phone, paste it into + Add player(s) → Or paste a list of names. Also handy as a backup.');return;
     case 'edit':ui.editing=ui.editing===id?null:id;ui.confirmDel=null;break;
     case 'pLine':{const p=findP(id);if(!p)return;const i=+v;p.lines=p.lines.includes(i)?p.lines.filter(x=>x!==i):[...p.lines,i];persist('panel');break;}
     case 'pSide':{const p=findP(id);if(!p)return;p.side=v;persist('panel');break;}
     case 'del':ui.confirmDel=id;break;
     case 'delNo':ui.confirmDel=null;break;
-    case 'delYes':state.panel.players=state.panel.players.filter(p=>p.id!==id);['present','anchor','benchStart','late','injured'].forEach(k=>delete M[k][id]);ui.editing=null;ui.confirmDel=null;persist('panel');persist('match');break;
+    case 'delYes':state.panel.players=state.panel.players.filter(p=>p.id!==id);['present','anchor','lock','benchStart','late','injured'].forEach(k=>delete M[k][id]);ui.editing=null;ui.confirmDel=null;persist('panel');persist('match');break;
     case 'size':{const n=+v;M.form=DEFAULT_FORM[n].slice();M.size=n;persist('match');break;}
     case 'form':{const i=+el.dataset.i;M.form[i]=Math.max(0,Math.min(6,M.form[i]+(+v)));M.size=sumForm(M.form);persist('match');break;}
     case 'half':{const q=isQuarters(M);M.half=Math.max(5,Math.min(60,M.half+5*(+v)));const T=M.half*2;M.windows=(q||M.equal)?quarters(T):autoWindows(T,M.subs);persist('match');break;}
@@ -1014,18 +1044,19 @@ function act(a,el){
     case 'availToggle':ui.availOpen=!ui.availOpen;return;
     case 'availApply':{const rv=parseRSVP(ui.avail||'');if(rv&&rv.people.length){ui.availMsg=applyRSVP(rv,true);break;}
       const r=matchNames(ui.avail||'');if(!r.found.length){ui.availMsg='No names matched the panel.';break;}
-      M.present={};r.found.forEach(p=>M.present[p.id]=true);Object.keys(M.anchor).forEach(id=>{if(!M.present[id])delete M.anchor[id];});Object.keys(M.benchStart).forEach(id=>{if(!M.present[id])delete M.benchStart[id];});
+      M.present={};r.found.forEach(p=>M.present[p.id]=true);['anchor','lock'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));Object.keys(M.benchStart).forEach(id=>{if(!M.present[id])delete M.benchStart[id];});
       ui.availMsg=`Ticked ${r.found.length}.`+(r.missing.length?` Not on the panel: <b>${r.missing.map(esc).join(', ')}</b> — add them on the Panel tab, then paste again.`:'');
       persist('match');break;}
-    case 'present':if(M.present[id]){delete M.present[id];delete M.anchor[id];delete M.benchStart[id];}else M.present[id]=true;persist('match');break;
+    case 'present':if(M.present[id]){delete M.present[id];delete M.anchor[id];delete M.lock[id];delete M.benchStart[id];}else M.present[id]=true;persist('match');break;
     case 'allIn':state.panel.players.forEach(p=>M.present[p.id]=true);persist('match');break;
-    case 'allOut':M.present={};M.anchor={};M.benchStart={};persist('match');break;
+    case 'allOut':M.present={};M.anchor={};M.lock={};M.benchStart={};persist('match');break;
+    case 'lock':if(M.lock[id])delete M.lock[id];else M.lock[id]=true;persist('match');break;
     case 'anchor':if(M.anchor[id])delete M.anchor[id];else{M.anchor[id]=true;delete M.benchStart[id];}persist('match');break;
     case 'bench':if(M.benchStart[id])delete M.benchStart[id];else{M.benchStart[id]=true;delete M.anchor[id];}persist('match');break;
     case 'timing':ui.timing=ui.timing===id?null:id;break;
     case 'reset':ui.confirmReset=true;break;
     case 'resetNo':ui.confirmReset=false;break;
-    case 'resetYes':Object.assign(M,{present:{},anchor:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
+    case 'resetYes':Object.assign(M,{present:{},anchor:{},lock:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
     case 'shuffle':M.seed=(M.seed%9973)+1;M.done={};M.moves=[];ui.sel=null;persist('match');toast('New combination');break;
     case 'view':ui.view=+v;ui.sel=null;break;
     case 'pick':{const tgt=el.dataset.slot!=null?{slot:+el.dataset.slot}:{pid:el.dataset.pid};
@@ -1041,6 +1072,8 @@ function act(a,el){
     case 'sheetCopy':{const ta=$('#sheetText');if(ta){ta.focus();ta.select();}try{navigator.clipboard.writeText(ui.sheet.text).then(()=>toast('Copied'),()=>toast('Text selected — use Copy'));}catch(e){toast('Text selected — use Copy');}return;}
     case 'sheetClose':ui.sheet=null;ui.pending=null;break;
     case 'send':sendToPhone();return;
+    case 'shareMenu':ui.sheet={mode:'menu',title:'Share',note:'Send to the other mentors, or load what they sent you.'};break;
+    case 'addOpen':ui.addOpen=!ui.addOpen;if(!ui.addOpen)ui.panelMsg='';break;
     case 'pasteOpen':ui.pasteCode='';ui.sheet={mode:'paste',title:'Load from another phone',note:'Paste the link (or code) another mentor sent you.'};break;
     case 'pasteLoad':offerImport(ui.pasteCode||'');return;
     case 'importYes':if(ui.pending){state.panel=ui.pending.panel;state.match=ui.pending.match;ui.pending=null;ui.sheet=null;ui.sel=null;ui.view=0;persist('panel');persist('match');ui.tab='plan';toast('Plan loaded');}break;
