@@ -14,6 +14,7 @@ To update the app, replace `index.html` and push to `main`.
 
 The bottom of the page shows the version and the commit it was published from, linked to that commit here.
 
+- **v1.3** — Pick who sits out when: each player's **Off** button lets you choose the quarter(s) they sit out; the page fills everyone else fairly. Replaces the old **B** (start on bench), which carries over as "sits out Q1". Your picks are outlined in Off each quarter, with warnings if a quarter can't be honoured.
 - **v1.2** — © marks core players (play the whole match); ⚓ now keeps a player in one position. Panel tab shows the list first with a + Add player(s) button. Share button in the title bar (send link, WhatsApp text, panel list, load from a link).
 - **v1.1** — Your adjustments get their own section (with Undo / Undo all); Substitutions shows only what happens at each break. Version number on the page.
 - **v1.0** — First version: panel, attendance, ClubZap RSVP import, equal-time quarters, tap/drag swaps, send to another phone.

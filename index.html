@@ -124,6 +124,8 @@ textarea{min-height:120px;resize:vertical}
 .addbox .lbl:first-child{margin-top:0}
 .iconbtn.on4{background:#d7ecf0;color:#1d6273}
 .iconbtn{min-width:36px}
+.offrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:2px 0 4px 40px}
+.tag.pick{outline:2px solid var(--blue);outline-offset:-2px;background:#e6edf8;color:var(--blue)}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -173,7 +175,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
-const APP_VERSION='v1.2',REPO_URL='https://github.com/nmmh/gaa-planner';
+const APP_VERSION='v1.3',REPO_URL='https://github.com/nmmh/gaa-planner';
 let commitInfo=null;
 function verHtml(){
   if(commitInfo)return `<a href="${commitInfo.url}" target="_blank" rel="noopener">${APP_VERSION} · ${commitInfo.sha}</a> · ${commitInfo.date} · <a href="${REPO_URL}/commits/main" target="_blank" rel="noopener">history</a>`;
@@ -205,7 +207,7 @@ function periodName(i,a,b,M){return isQuarters(M)?'Q'+(i+1):(fm(a)+'–'+fm(b)+"
 
 function defaultMatch(){
   return {opp:'',date:'',size:15,form:DEFAULT_FORM[15].slice(),half:25,subs:6,windows:[12.5,25,37.5],rolling:true,
-    present:{},anchor:{},lock:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{}};
+    present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{}};
 }
 function autoWindows(T,S){
   if(S<=0)return [];
@@ -224,7 +226,9 @@ function normPanel(p){
 function normMatch(m){
   const d=defaultMatch();m=m&&typeof m==='object'?JSON.parse(JSON.stringify(m)):{};
   const o=Object.assign(d,m);
-  ['present','anchor','lock','benchStart','late','injured','done','rsvp'].forEach(k=>{if(!o[k]||typeof o[k]!=='object'||Array.isArray(o[k]))o[k]={};});
+  ['present','anchor','lock','sitOut','benchStart','late','injured','done','rsvp'].forEach(k=>{if(!o[k]||typeof o[k]!=='object'||Array.isArray(o[k]))o[k]={};});
+  Object.keys(o.benchStart).forEach(id=>{o.sitOut[id]=Object.assign({},o.sitOut[id],{0:true});});o.benchStart={};
+  Object.keys(o.sitOut).forEach(id=>{const v=o.sitOut[id];if(!v||typeof v!=='object'||!Object.keys(v).length)delete o.sitOut[id];});
   if(!Array.isArray(o.form)||o.form.length!==6)o.form=DEFAULT_FORM[15].slice();
   o.form=o.form.map(n=>Math.max(0,Math.min(6,+n||0)));
   o.form[0]=Math.min(1,o.form[0]);
@@ -271,7 +275,7 @@ function buildSlots(form){
 
 /* ---------- starting team ---------- */
 function pickStarters(avail,slots,M){
-  const pri=p=>M.anchor[p.id]?1000:(M.benchStart[p.id]?-30:0);
+  const pri=p=>M.anchor[p.id]?1000:sitsOut(M,p.id,0)?-1000:hasPlan(M,p.id)?200:0;
   const val=(p,s)=>fit(p,s)+pri(p)+hash(M.seed+':'+p.id+':start')*2.5;
   const assign=new Array(slots.length).fill(null);const used=new Set();
   for(let k=0;k<slots.length;k++){
@@ -293,6 +297,9 @@ function pickStarters(avail,slots,M){
   return assign;
 }
 
+function periodList(M){const T=M.half*2;const w=[...new Set(M.windows.filter(t=>t>0&&t<T))].sort((a,b)=>a-b);const b=[0,...w,T];return b.slice(0,-1).map((a,i)=>periodName(i,a,b[i+1],M));}
+const sitsOut=(M,id,i)=>!!(M.sitOut[id]&&M.sitOut[id][i]);
+const hasPlan=(M,id)=>!!(M.sitOut[id]&&Object.keys(M.sitOut[id]).length);
 /* ---------- match simulation ---------- */
 function simulate(){
   const M=state.match,all=state.panel.players;
@@ -385,7 +392,8 @@ function simulate(){
       entry.window=true;
       const nextT=times.find(x=>x>t&&windows.includes(x))||T;const L=nextT-t;
       const cands=present.filter(p=>st[p.id]==='field'||st[p.id]==='bench');
-      const prio=p=>M.anchor[p.id]?1e6:(target[p.id]-mins[p.id])+(st[p.id]==='field'?L*0.5:0)+nz(p.id,'e'+t)*0.1;
+      const pi=wi+1;
+      const prio=p=>M.anchor[p.id]?1e6:sitsOut(M,p.id,pi)?-1e6:hasPlan(M,p.id)?1e5:(target[p.id]-mins[p.id])+(st[p.id]==='field'?L*0.5:0)+nz(p.id,'e'+t)*0.1;
       const rotSlots=field.map((p,si)=>(!p||!M.anchor[p.id])?si:-1).filter(si=>si>=0);
       const fieldAnch=field.filter(p=>p&&M.anchor[p.id]);
       const ranked=cands.filter(p=>!fieldAnch.includes(p)).sort((a,b)=>prio(b)-prio(a));
@@ -414,15 +422,34 @@ function simulate(){
     else if(wi>=0){
       entry.window=true;
       const allowed=Math.max(0,Math.min(per[wi]+carry,M.subs-used));entry.noneLeft=allowed===0&&M.subs>0;
-      const justOn=new Set(),justOff=new Set();let done=0;
+      const justOn=new Set(),justOff=new Set();let done=0;const pi=wi+1;
+      // your planned sit-outs first: off if planned off this period, on if planned on
+      const mustOff=field.map((f,si)=>f&&sitsOut(M,f.id,pi)?si:-1).filter(si=>si>=0);
+      let mustOn=benchPool(new Set()).filter(b=>hasPlan(M,b.id)&&!sitsOut(M,b.id,pi));
+      let others=benchPool(new Set()).filter(b=>!hasPlan(M,b.id)).sort((a,b)=>mins[a.id]-mins[b.id]);
+      for(const si of mustOff){
+        const cand=mustOn.length?mustOn:others;if(!cand.length)break;
+        let best=null;cand.forEach(b=>{const v=fit(b,slots[si]);if(!best||v>best.v)best={v,b};});
+        const f=field[si];setSlot(si,best.b,t);st[best.b.id]='field';st[f.id]='bench';subbedOff.add(f.id);justOn.add(best.b.id);justOff.add(f.id);
+        mustOn=mustOn.filter(x=>x!==best.b);others=others.filter(x=>x!==best.b);
+        entry.items.push({kind:'sub',on:best.b,off:f,slot:slots[si]});done++;used++;relocate(best.b,si,t,entry);
+      }
+      for(const b of mustOn){
+        let best=null;field.forEach((f,si)=>{if(!f||M.anchor[f.id]||justOn.has(f.id)||hasPlan(M,f.id))return;if(slots[si].line===0&&!(b.lines||[]).includes(0))return;
+          const v=mins[f.id]+3*fit(b,slots[si]);if(!best||v>best.v)best={v,si,f};});
+        if(!best)continue;
+        setSlot(best.si,b,t);st[b.id]='field';st[best.f.id]='bench';subbedOff.add(best.f.id);justOn.add(b.id);justOff.add(best.f.id);
+        entry.items.push({kind:'sub',on:b,off:best.f,slot:slots[best.si]});done++;used++;relocate(b,best.si,t,entry);
+      }
+      if(done>allowed&&M.subs>0)overLimit=true;
       while(done<allowed){
-        const pool=benchPool(justOff);if(!pool.length)break;
+        const pool=benchPool(justOff).filter(b=>!sitsOut(M,b.id,pi));if(!pool.length)break;
         pool.sort((a,b)=>mins[a.id]-mins[b.id]||nz(a.id,'b')-nz(b.id,'b'));
         let swap=null;
         for(const b of pool){
           let best=null;
           field.forEach((f,si)=>{
-            if(!f||M.anchor[f.id]||justOn.has(f.id))return;
+            if(!f||M.anchor[f.id]||justOn.has(f.id)||hasPlan(M,f.id))return;
             if(slots[si].line===0&&!(b.lines||[]).includes(0))return;
             const gap=mins[f.id]-mins[b.id];
             if(gap<=0||(gap<5&&mins[b.id]>0))return;
@@ -465,6 +492,15 @@ function simulate(){
     const off=[],notYet=[];
     present.forEach(p=>{const ij=injAt(p.id);if(ij!==null&&ij<=a)return;if(on.has(p.id))return;if(lateAt(p.id)>a)notYet.push(p);else off.push(p);});
     periods.push({a,b,off,notYet,at});}
+  // check the plan honoured your sit-out picks
+  periods.forEach((pr,i)=>{
+    const offIds=new Set(pr.off.map(p=>p.id));
+    const playing=present.filter(p=>sitsOut(M,p.id,i)&&!offIds.has(p.id)&&!pr.notYet.includes(p)&&!(injAt(p.id)!==null&&injAt(p.id)<=pr.a));
+    const sitting=present.filter(p=>hasPlan(M,p.id)&&!sitsOut(M,p.id,i)&&offIds.has(p.id));
+    const nm=periodName(i,pr.a,pr.b,M);
+    if(playing.length)warnings.push(`${nm}: too many picked to sit out, so ${playing.map(p=>esc(shortName(p.name))).join(', ')} still play${playing.length===1?'s':''}.`);
+    if(sitting.length)warnings.push(`${nm}: not enough positions for everyone you planned to play, so ${sitting.map(p=>esc(shortName(p.name))).join(', ')} sit${sitting.length===1?'s':''} out too.`);
+  });
   return {moveBad,bounds,periods,slots,starters,field,hist,timeline,mins,present,st,used,T,warnings,avail0,windows,lateAt,injAt};
 }
 
@@ -644,8 +680,9 @@ function matchView(){
         <button class="btn wide" style="margin-top:8px" data-a="availApply">Tick these players</button>
         ${ui.availMsg?`<div class="warnbox" style="margin-bottom:0">${ui.availMsg}</div>`:''}
       </details>
-      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. <b>©</b> core — plays the whole match · <b>⚓</b> stays in one position · <b>B</b> starts on the bench · <b>⏱</b> late or injured.</p>`;
+      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. <b>©</b> core — plays the whole match · <b>⚓</b> stays in one position · <b>Off</b> pick the ${isQuarters(M)?'quarter':'period'}(s) they sit out · <b>⏱</b> late or injured.${Object.keys(M.sitOut).length?` <button class="btn alt sm" data-a="sitClear" style="margin-left:4px">Clear sit-out picks</button>`:''}</p>`;
   if(!ps.length)h+=`<div class="empty-state">Add players on the Panel tab first.</div>`;
+  const pl=periodList(M);
   ps.forEach(p=>{
     const on=!!M.present[p.id];
     const timed=M.late[p.id]||(M.injured[p.id]!==undefined&&M.injured[p.id]!=='');
@@ -653,8 +690,12 @@ function matchView(){
       ${on?`
       <button class="iconbtn ${M.anchor[p.id]?'on':''}" data-a="anchor" data-id="${p.id}" aria-label="Core: plays the full match">©</button>
       <button class="iconbtn ${M.lock[p.id]?'on4':''}" data-a="lock" data-id="${p.id}" aria-label="Stays in one position">⚓</button>
-      <button class="iconbtn ${M.benchStart[p.id]?'on2':''}" data-a="bench" data-id="${p.id}" aria-label="Start on bench">B</button>
+      <button class="iconbtn ${hasPlan(M,p.id)?'on2':''}" data-a="offOpen" data-id="${p.id}" aria-label="Quarters sitting out" style="font-size:13px">${hasPlan(M,p.id)?Object.keys(M.sitOut[p.id]).map(Number).sort().map(i=>pl[i]||'?').join(' '):'Off'}</button>
       <button class="iconbtn ${timed?'on3':''}" data-a="timing" data-id="${p.id}" aria-label="Late or injured">⏱</button>`:''}</div>`;
+    if(on&&ui.offFor===p.id){
+      h+=`<div class="offrow"><span class="small muted">Sits out:</span>${pl.map((n,i)=>`<button class="chip ${sitsOut(M,p.id,i)?'on':''}" data-a="sit" data-id="${p.id}" data-v="${i}">${n}</button>`).join('')}</div>
+        <div class="small muted" style="padding:0 0 8px 40px">Plays every other ${isQuarters(M)?'quarter':'period'}. Leave blank and the page decides.</div>`;
+    }
     if(on&&ui.timing===p.id){
       h+=`<div class="timing"><div><label>Arrives at minute</label><input type="number" inputmode="numeric" data-f="late" data-id="${p.id}" value="${esc(M.late[p.id]||'')}" placeholder="on time"></div>
         <div><label>Off injured at minute</label><input type="number" inputmode="numeric" data-f="inj" data-id="${p.id}" value="${esc(M.injured[p.id]===undefined?'':M.injured[p.id])}" placeholder="—"></div></div>`;
@@ -662,7 +703,7 @@ function matchView(){
   });
   h+=`</div>`;
   if(ps.length)h+=`<button class="btn acc wide" data-a="tab" data-v="plan" style="margin:6px 0 10px">See the plan ▶</button>`;
-  h+=`<div class="card"><h2>New match</h2><p class="small muted" style="margin-top:0">Clears attendance, ©/⚓ marks, late/injured and ticks. Keeps the panel and settings.</p>
+  h+=`<div class="card"><h2>New match</h2><p class="small muted" style="margin-top:0">Clears attendance, ©/⚓/Off picks, late/injured and ticks. Keeps the panel and settings.</p>
     ${ui.confirmReset?`<div class="row"><span class="grow small">Clear everything for a new match?</span><button class="btn alt sm" data-a="resetNo">Cancel</button><button class="btn warn sm" data-a="resetYes">Clear</button></div>`:`<button class="btn alt" data-a="reset">Start a new match</button>`}</div>`;
   return h;
 }
@@ -708,7 +749,7 @@ function planView(){
   h+=`<div class="benchStrip"><div class="lineTag" style="margin-top:4px">Bench · ${periodName(vi,pr.a,pr.b,M)}</div><div class="lineRow" style="flex-wrap:wrap">${pr.off.map(p=>`<div class="bchip ${selKey==='p'+p.id?'sel':''}" data-a="pick" data-pid="${p.id}" data-dz="1">${esc(shortName(p.name))}</div>`).join('')||'<span style="color:rgba(255,255,255,.7);font-size:13px">Nobody — all on</span>'}${pr.notYet.map(p=>`<div class="bchip late">${esc(shortName(p.name))} · late</div>`).join('')}</div></div>`;
   h+=`</div><div class="legend"><span><b style="color:var(--on)">20' Name</b> = comes on</span><span><b style="color:var(--muted)">↔</b> = position change</span><span>© core (full match)</span><span>⚓ stays in position</span><span>Red outline = out of usual position</span></div>`;
   // who sits out each period
-  h+=`<div class="card"><h2>Off each ${isQuarters(M)?'quarter':'period'}</h2><ul class="tl">`+P.periods.map((pr,i)=>`<li><div class="t" style="font-size:20px">${periodName(i,pr.a,pr.b,M)}</div><div class="grow" style="padding-top:2px">${pr.off.length?pr.off.map(p=>`<span class="tag" style="font-size:14px;padding:4px 8px;margin:0 4px 4px 0;display:inline-block">${esc(shortName(p.name))}</span>`).join(''):'<span class="muted small">Nobody — all on</span>'}${pr.notYet.length?`<div class="small muted">Not here yet: ${pr.notYet.map(p=>esc(shortName(p.name))).join(', ')}</div>`:''}</div></li>`).join('')+`</ul></div>`;
+  h+=`<div class="card"><h2>Off each ${isQuarters(M)?'quarter':'period'}</h2>${Object.keys(M.sitOut).length?'<p class="small muted" style="margin:-4px 0 4px">Outlined = your pick · the rest the page chose</p>':'<p class="small muted" style="margin:-4px 0 4px">Pick specific quarters with <b>Off</b> on the Here today tab.</p>'}<ul class="tl">`+P.periods.map((pr,i)=>`<li><div class="t" style="font-size:20px">${periodName(i,pr.a,pr.b,M)}</div><div class="grow" style="padding-top:2px">${pr.off.length?pr.off.map(p=>`<span class="tag ${sitsOut(M,p.id,i)?'pick':''}" style="font-size:14px;padding:4px 8px;margin:0 4px 4px 0;display:inline-block">${esc(shortName(p.name))}</span>`).join(''):'<span class="muted small">Nobody — all on</span>'}${pr.notYet.length?`<div class="small muted">Not here yet: ${pr.notYet.map(p=>esc(shortName(p.name))).join(', ')}</div>`:''}</div></li>`).join('')+`</ul></div>`;
   // timeline
   // the plan as it will happen on the day (adjustments already folded in)
   const subsTl=P.timeline.filter(e=>e.t>0);
@@ -852,7 +893,7 @@ function applyRSVP(r,toMatch){
   if(!toMatch)return `Panel: added ${added.length} new player${added.length===1?'':'s'}, ${r.people.length-added.length} already on it.`+(added.length?' Set their positions below.':'');
   M.present={};M.rsvp=ids;
   Object.keys(ids).forEach(id=>{if(ids[id]==='A')M.present[id]=true;});
-  ['anchor','lock','benchStart','late','injured'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));
+  ['anchor','lock','sitOut','late','injured'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));
   M.moves=[];M.done={};
   if(r.opp)M.opp=r.opp;if(r.date)M.date=r.date;
   persist('match');
@@ -1027,7 +1068,7 @@ function act(a,el){
     case 'pSide':{const p=findP(id);if(!p)return;p.side=v;persist('panel');break;}
     case 'del':ui.confirmDel=id;break;
     case 'delNo':ui.confirmDel=null;break;
-    case 'delYes':state.panel.players=state.panel.players.filter(p=>p.id!==id);['present','anchor','lock','benchStart','late','injured'].forEach(k=>delete M[k][id]);ui.editing=null;ui.confirmDel=null;persist('panel');persist('match');break;
+    case 'delYes':state.panel.players=state.panel.players.filter(p=>p.id!==id);['present','anchor','lock','sitOut','late','injured'].forEach(k=>delete M[k][id]);ui.editing=null;ui.confirmDel=null;persist('panel');persist('match');break;
     case 'size':{const n=+v;M.form=DEFAULT_FORM[n].slice();M.size=n;persist('match');break;}
     case 'form':{const i=+el.dataset.i;M.form[i]=Math.max(0,Math.min(6,M.form[i]+(+v)));M.size=sumForm(M.form);persist('match');break;}
     case 'half':{const q=isQuarters(M);M.half=Math.max(5,Math.min(60,M.half+5*(+v)));const T=M.half*2;M.windows=(q||M.equal)?quarters(T):autoWindows(T,M.subs);persist('match');break;}
@@ -1044,19 +1085,22 @@ function act(a,el){
     case 'availToggle':ui.availOpen=!ui.availOpen;return;
     case 'availApply':{const rv=parseRSVP(ui.avail||'');if(rv&&rv.people.length){ui.availMsg=applyRSVP(rv,true);break;}
       const r=matchNames(ui.avail||'');if(!r.found.length){ui.availMsg='No names matched the panel.';break;}
-      M.present={};r.found.forEach(p=>M.present[p.id]=true);['anchor','lock'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));Object.keys(M.benchStart).forEach(id=>{if(!M.present[id])delete M.benchStart[id];});
+      M.present={};r.found.forEach(p=>M.present[p.id]=true);['anchor','lock'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));Object.keys(M.sitOut).forEach(id=>{if(!M.present[id])delete M.sitOut[id];});
       ui.availMsg=`Ticked ${r.found.length}.`+(r.missing.length?` Not on the panel: <b>${r.missing.map(esc).join(', ')}</b> — add them on the Panel tab, then paste again.`:'');
       persist('match');break;}
-    case 'present':if(M.present[id]){delete M.present[id];delete M.anchor[id];delete M.lock[id];delete M.benchStart[id];}else M.present[id]=true;persist('match');break;
+    case 'present':if(M.present[id]){delete M.present[id];delete M.anchor[id];delete M.lock[id];delete M.sitOut[id];}else M.present[id]=true;persist('match');break;
     case 'allIn':state.panel.players.forEach(p=>M.present[p.id]=true);persist('match');break;
-    case 'allOut':M.present={};M.anchor={};M.lock={};M.benchStart={};persist('match');break;
+    case 'allOut':M.present={};M.anchor={};M.lock={};M.sitOut={};persist('match');break;
     case 'lock':if(M.lock[id])delete M.lock[id];else M.lock[id]=true;persist('match');break;
-    case 'anchor':if(M.anchor[id])delete M.anchor[id];else{M.anchor[id]=true;delete M.benchStart[id];}persist('match');break;
-    case 'bench':if(M.benchStart[id])delete M.benchStart[id];else{M.benchStart[id]=true;delete M.anchor[id];}persist('match');break;
-    case 'timing':ui.timing=ui.timing===id?null:id;break;
+    case 'anchor':if(M.anchor[id])delete M.anchor[id];else{M.anchor[id]=true;delete M.sitOut[id];}persist('match');break;
+    case 'offOpen':ui.offFor=ui.offFor===id?null:id;ui.timing=null;break;
+    case 'sit':{const i=+v;const cur=Object.assign({},M.sitOut[id]||{});if(cur[i])delete cur[i];else cur[i]=true;
+      if(Object.keys(cur).length){M.sitOut[id]=cur;delete M.anchor[id];}else delete M.sitOut[id];persist('match');break;}
+    case 'sitClear':M.sitOut={};persist('match');toast('Sit-out picks cleared');break;
+    case 'timing':ui.timing=ui.timing===id?null:id;ui.offFor=null;break;
     case 'reset':ui.confirmReset=true;break;
     case 'resetNo':ui.confirmReset=false;break;
-    case 'resetYes':Object.assign(M,{present:{},anchor:{},lock:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
+    case 'resetYes':Object.assign(M,{present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
     case 'shuffle':M.seed=(M.seed%9973)+1;M.done={};M.moves=[];ui.sel=null;persist('match');toast('New combination');break;
     case 'view':ui.view=+v;ui.sel=null;break;
     case 'pick':{const tgt=el.dataset.slot!=null?{slot:+el.dataset.slot}:{pid:el.dataset.pid};
