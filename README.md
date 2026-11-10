@@ -12,7 +12,7 @@ To update the app, replace `index.html` and push to `main`.
 
 ## Versions
 
-The version shown at the bottom of the page links to its commit here. Each release is tagged (`v1.0`, `v1.1`, …).
+The bottom of the page shows the version and the commit it was published from, linked to that commit here.
 
 - **v1.1** — Your adjustments get their own section (with Undo / Undo all); Substitutions shows only what happens at each break. Version number on the page.
 - **v1.0** — First version: panel, attendance, ClubZap RSVP import, equal-time quarters, tap/drag swaps, send to another phone.
