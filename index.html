@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAA Sub Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f5ef; --card:#fff; --ink:#14251a; --muted:#5d6b61; --line:#dfe5da;
+  --pitch:#1e6a3a; --pitch2:#22743f; --accent:#f2b632; --accent-ink:#4a3500;
+  --on:#1f8a4c; --off:#c2412d; --blue:#2f5fa8;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,system-ui,sans-serif;font-size:16px;-webkit-text-size-adjust:100%}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{max-width:640px;margin:0 auto;padding:0 12px 96px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 2px 8px;display:flex;align-items:center;gap:10px}
+header h1{font-family:"Barlow Condensed",sans-serif;font-size:24px;margin:0;letter-spacing:.3px;flex:1;line-height:1}
+header h1 span{color:var(--pitch)}
+.pill{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:#e6ebe2;color:var(--muted);white-space:nowrap}
+.pill.live{background:#dff2e5;color:#17663a}
+.pill.warn{background:#fdecc8;color:#7a5200}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:6;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center}
+nav.tabs .in{display:flex;max-width:640px;width:100%}
+nav.tabs button{flex:1;border:0;background:none;padding:10px 4px 14px;font-weight:600;font-size:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button b{font-family:"Barlow Condensed";font-size:20px;line-height:1}
+nav.tabs button.on{color:var(--pitch)}
+nav.tabs button.on b{color:var(--pitch)}
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin:10px 0;box-shadow:0 1px 0 var(--line)}
+.card h2{font-family:"Barlow Condensed";font-size:20px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h2 .sp{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+input[type=text],input[type=number],input[type=date],textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfcfa;font-size:16px}
+input:focus,textarea:focus{outline:none;border-color:var(--pitch)}
+textarea{min-height:120px;resize:vertical}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;background:var(--pitch);color:#fff}
+.btn.alt{background:#e8ede4;color:var(--ink)}
+.btn.warn{background:var(--off);color:#fff}
+.btn.acc{background:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:7px 11px;font-size:14px}
+.btn.wide{width:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:6px 11px;font-weight:600;font-size:14px;min-width:42px}
+.chip.on{background:var(--pitch);border-color:var(--pitch);color:#fff}
+.chip.side.on{background:var(--blue);border-color:var(--blue)}
+.seg{display:flex;background:#e8ede4;border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:8px 0;font-weight:700}
+.seg button.on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12);color:var(--pitch)}
+.lbl{font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.4px}
+.lbl:first-child{margin-top:0}
+.stepper{display:inline-flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.stepper button{border:0;background:#f0f3ec;width:38px;height:38px;font-size:20px;font-weight:700}
+.stepper span{min-width:40px;text-align:center;font-weight:700;font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.formgrid .f{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+/* player lists */
+.plist{list-style:none;margin:0;padding:0}
+.plist li{border-top:1px solid var(--line);padding:10px 0}
+.plist li:first-child{border-top:0}
+.prow{display:flex;align-items:center;gap:10px}
+.prow .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:12px;font-weight:700;background:#eef2ea;color:#3d5444;border-radius:6px;padding:2px 6px;white-space:nowrap}
+.tag.s{background:#e6edf8;color:var(--blue)}
+.iconbtn{border:0;background:#eef2ea;border-radius:9px;min-width:38px;height:38px;font-weight:700;font-size:15px;padding:0 9px}
+.iconbtn.on{background:var(--accent);color:var(--accent-ink)}
+.iconbtn.on2{background:#dbe5f5;color:var(--blue)}
+.iconbtn.on3{background:#fbe1dc;color:var(--off)}
+.edit{margin-top:10px;padding:10px;background:#f6f8f3;border-radius:10px}
+/* attendance */
+.att{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.att:first-child{border-top:0}
+.tick{width:30px;height:30px;border-radius:9px;border:2px solid #b9c5b7;display:grid;place-items:center;background:#fff;flex:none;font-weight:800;color:#fff;font-size:18px}
+.tick.on{background:var(--on);border-color:var(--on)}
+.att .nm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att.absent .nm{color:#9aa69c;font-weight:500}
+.att .who{display:flex;flex:1;align-items:center;gap:10px;min-width:0;border:0;background:none;padding:0;text-align:left}
+.timing{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0 10px 40px}
+.timing label{font-size:12px;font-weight:600;color:var(--muted)}
+.counter{font-family:"Barlow Condensed";font-size:28px;line-height:1;color:var(--pitch)}
+/* plan */
+.summary{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.stat{background:#fff;border-radius:12px;padding:8px 12px;flex:none;box-shadow:0 1px 0 var(--line)}
+.stat b{display:block;font-family:"Barlow Condensed";font-size:24px;line-height:1}
+.stat span{font-size:12px;color:var(--muted);font-weight:600}
+.warnbox{background:#fff6e0;border:1px solid #f3dfa8;color:#6b4a00;border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px}
+.warnbox div+div{margin-top:5px}
+.pitch{background:repeating-linear-gradient(180deg,var(--pitch) 0 44px,var(--pitch2) 44px 88px);border-radius:var(--r);padding:12px 6px;position:relative}
+.pitch .lineRow{display:flex;justify-content:center;gap:6px;margin:6px 0}
+.pitch .lineTag{color:rgba(255,255,255,.65);font-size:11px;font-weight:700;letter-spacing:.6px;text-align:center;margin-top:8px;text-transform:uppercase}
+.slot{background:#fff;border-radius:10px;padding:6px 6px 5px;width:calc((100% - 12px)/3);max-width:150px;text-align:center;position:relative;min-height:54px}
+.slot .num{position:absolute;top:-7px;left:-4px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:12px;border-radius:99px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 4px}
+.slot b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot b.empty{color:var(--off)}
+.slot .pos{font-size:11px;color:var(--muted);font-weight:600}
+.slot .anc{font-size:11px}
+.slot .chg{font-size:11.5px;color:var(--on);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px dashed var(--line);margin-top:3px;padding-top:2px}
+.slot .chg.inj{color:var(--off)}
+.slot.fit-bad{outline:2px solid #f0b8ad}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 2px}
+.slot,.bchip{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:grab}
+.slot.sel,.bchip.sel{outline:3px solid var(--accent);outline-offset:1px}
+.slot.over,.bchip.over{outline:3px dashed var(--accent);outline-offset:1px}
+.slot.dragging,.bchip.dragging{opacity:.35}
+.ghost{position:fixed;z-index:50;pointer-events:none;transform:scale(1.06);box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.slot .chg.mv{color:var(--muted);font-weight:600}
+.benchStrip{border-top:2px dashed rgba(255,255,255,.35);margin-top:12px;padding-top:4px}
+.bchip{background:#f4f1e3;color:var(--ink);border-radius:99px;padding:7px 12px;font-weight:700;font-size:14px}
+.bchip.late{opacity:.6;cursor:default}
+.mvrow .txt{font-size:13.5px;color:var(--muted)}
+.undo{border:0;background:#eef2ea;border-radius:8px;padding:5px 9px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.tl{list-style:none;margin:0;padding:0}
+.tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.tl > li:first-child{border-top:0}
+.tl .t{font-family:"Barlow Condensed";font-size:24px;width:48px;flex:none;color:var(--pitch);line-height:1.1}
+.tl .t small{display:block;font-family:Barlow;font-size:11px;color:var(--muted);font-weight:600}
+.sw{display:flex;align-items:center;gap:8px;padding:4px 0}
+.sw .txt{flex:1;min-width:0;font-size:15px;line-height:1.3}
+.on-n{color:var(--on);font-weight:700}
+.off-n{color:var(--off);font-weight:600}
+.sw.done .txt{opacity:.45;text-decoration:line-through}
+.mbar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 36px;gap:8px;align-items:center;padding:4px 0;font-size:14px}
+.mbar .bar{height:10px;border-radius:99px;background:#e8ede4;overflow:hidden}
+.mbar .bar i{display:block;height:100%;background:var(--pitch);border-radius:99px}
+.mbar .bar i.anc{background:var(--accent)}
+.mbar .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.mbar .m{text-align:right;font-weight:700}
+.empty-state{text-align:center;padding:30px 10px;color:var(--muted)}
+.empty-state .big{font-family:"Barlow Condensed";font-size:26px;color:var(--ink);margin-bottom:6px}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,20,14,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px;max-height:85vh;overflow:auto}
+.sheet textarea{min-height:260px;font-size:14px;font-family:ui-monospace,Menlo,monospace}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:8px}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:99px;font-weight:600;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+details summary{cursor:pointer;font-weight:600;color:var(--pitch)}
+.toggle{display:flex;align-items:center;gap:10px;border:0;background:none;padding:6px 0;text-align:left;width:100%}
+.sw-ui{width:44px;height:26px;border-radius:99px;background:#cfd8cc;position:relative;flex:none;transition:background .15s}
+.sw-ui::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw-ui.on{background:var(--pitch)}
+.sw-ui.on::after{left:21px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+/* ---------- constants ---------- */
+const LINES=[
+  {k:'GK',name:'Goalkeeper',short:'GK'},
+  {k:'FB',name:'Full back',short:'FB'},
+  {k:'HB',name:'Half back',short:'HB'},
+  {k:'MID',name:'Midfield',short:'MID'},
+  {k:'HF',name:'Half forward',short:'HF'},
+  {k:'FF',name:'Full forward',short:'FF'}
+];
+const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
+const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
+const SIDES={L:'Left',R:'Right',E:'Either'};
+const LS_KEY='hurling-sub-planner-v1';
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}h^=h>>>13;h=Math.imul(h,1274126177);return ((h>>>0)%100000)/100000;}
+function shortName(n){n=String(n||'').trim();const parts=n.split(/\s+/);if(parts.length<2||n.length<=13)return n;return parts[0]+' '+parts[parts.length-1][0]+'.';}
+function sumForm(f){return f.reduce((a,b)=>a+b,0);}
+function fm(t){t=Math.round(t*2)/2;return Number.isInteger(t)?String(t):(Math.floor(t)||'')+'½';}
+function minLabel(t,M){return t===M.half?'HT':fm(t)+"'";}
+function quarters(T){return [T/4,T/2,3*T/4].map(x=>Math.round(x*2)/2);}
+function isQuarters(M){const q=quarters(M.half*2);const w=M.windows.slice().sort((a,b)=>a-b);return w.length===3&&w.every((x,i)=>x===q[i]);}
+function periodName(i,a,b,M){return isQuarters(M)?'Q'+(i+1):(fm(a)+'–'+fm(b)+"'");}
+
+function defaultMatch(){
+  return {opp:'',date:'',size:15,form:DEFAULT_FORM[15].slice(),half:25,subs:6,windows:[12.5,25,37.5],rolling:true,
+    present:{},anchor:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{}};
+}
+function autoWindows(T,S){
+  if(S<=0)return [];
+  const w=S<=2?S:(S<=6?3:4);
+  const out=[];for(let i=1;i<=w;i++)out.push(Math.round(T*i/(w+1)));
+  return out;
+}
+function normPanel(p){
+  p=p&&typeof p==='object'?p:{};
+  const players=Array.isArray(p.players)?p.players.filter(x=>x&&x.id&&typeof x.name==='string').map(x=>({
+    id:String(x.id),name:String(x.name).slice(0,60),
+    lines:Array.isArray(x.lines)?x.lines.map(Number).filter(n=>n>=0&&n<=5):[],
+    side:SIDES[x.side]?x.side:'E'})):[];
+  return {players};
+}
+function normMatch(m){
+  const d=defaultMatch();m=m&&typeof m==='object'?JSON.parse(JSON.stringify(m)):{};
+  const o=Object.assign(d,m);
+  ['present','anchor','benchStart','late','injured','done','rsvp'].forEach(k=>{if(!o[k]||typeof o[k]!=='object'||Array.isArray(o[k]))o[k]={};});
+  if(!Array.isArray(o.form)||o.form.length!==6)o.form=DEFAULT_FORM[15].slice();
+  o.form=o.form.map(n=>Math.max(0,Math.min(6,+n||0)));
+  o.form[0]=Math.min(1,o.form[0]);
+  o.size=sumForm(o.form);
+  o.half=Math.max(5,Math.min(60,+o.half||30));
+  o.subs=Math.max(0,Math.min(40,+o.subs||0));
+  o.windows=Array.isArray(o.windows)?[...new Set(o.windows.map(n=>Math.round(+n*2)/2))].filter(n=>n>0&&n<o.half*2):[];
+  o.rolling=o.rolling!==false;o.moves=Array.isArray(o.moves)?o.moves.filter(m=>m&&m.id&&m.a&&typeof m.t==='number'):[];o.equal=!!o.equal;
+  o.seed=+o.seed||1;
+  return o;
+}
+
+/* ---------- state ---------- */
+let state={panel:{players:[]},match:defaultMatch()};
+let ui={tab:null,editing:null,timing:null,confirmReset:false,confirmDel:null,sheet:null,addName:'',addLines:[],addSide:'E',bulk:'',sync:'local'};
+try{const raw=localStorage.getItem(LS_KEY);if(raw){const j=JSON.parse(raw);state.panel=normPanel(j.panel);state.match=normMatch(j.match);}}catch(e){}
+
+/* ---------- position fit ---------- */
+function fit(p,slot){
+  const lines=p.lines||[];
+  const isGK=slot.line===0, hasGK=lines.includes(0);
+  if(isGK)return hasGK?12:-20;
+  let best=-Infinity;
+  for(const l of lines){if(l===0)continue;const d=Math.abs(l-slot.line);best=Math.max(best,d===0?8:d===1?3:-2*d);}
+  if(!lines.length)best=0; else if(best===-Infinity)best=-10; // keeper only
+  const ps=p.side||'E';let s=0;
+  if(slot.side==='L')s=ps==='L'?2:ps==='E'?1:-1;
+  else if(slot.side==='R')s=ps==='R'?2:ps==='E'?1:-1;
+  else s=ps==='E'?1:0.5;
+  return best+s;
+}
+function sidesFor(c){
+  if(c===1)return['C'];if(c===2)return['R','L'];if(c===3)return['R','C','L'];
+  return Array.from({length:c},(_,i)=>i===0?'R':i===c-1?'L':'C');
+}
+function buildSlots(form){
+  const slots=[];let n=1;
+  form.forEach((c,li)=>{sidesFor(c).forEach(s=>{
+    const lab=li===0?'GK':(s==='C'?'C ':s+' ')+LINES[li].short;
+    slots.push({id:slots.length,line:li,side:s,num:n++,label:lab});
+  });});
+  return slots;
+}
+
+/* ---------- starting team ---------- */
+function pickStarters(avail,slots,M){
+  const pri=p=>M.anchor[p.id]?1000:(M.benchStart[p.id]?-30:0);
+  const val=(p,s)=>fit(p,s)+pri(p)+hash(M.seed+':'+p.id+':start')*2.5;
+  const assign=new Array(slots.length).fill(null);const used=new Set();
+  for(let k=0;k<slots.length;k++){
+    let best=null;
+    for(let si=0;si<slots.length;si++){if(assign[si])continue;
+      for(const p of avail){if(used.has(p.id))continue;const v=val(p,slots[si]);if(!best||v>best.v)best={v,si,p};}}
+    if(!best)break;assign[best.si]=best.p;used.add(best.p.id);
+  }
+  let improved=true,iter=0;
+  while(improved&&iter<40){improved=false;iter++;
+    for(let a=0;a<slots.length;a++)for(let b=a+1;b<slots.length;b++){
+      const pa=assign[a],pb=assign[b];if(!pa||!pb)continue;
+      if(val(pb,slots[a])+val(pa,slots[b])>val(pa,slots[a])+val(pb,slots[b])+0.01){assign[a]=pb;assign[b]=pa;improved=true;}
+    }
+    for(let a=0;a<slots.length;a++){const pa=assign[a];if(!pa)continue;
+      for(const q of avail){if(used.has(q.id))continue;
+        if(val(q,slots[a])>val(pa,slots[a])+0.01){used.delete(pa.id);used.add(q.id);assign[a]=q;improved=true;break;}}}
+  }
+  return assign;
+}
+
+/* ---------- match simulation ---------- */
+function simulate(){
+  const M=state.match,all=state.panel.players;
+  const slots=buildSlots(M.form);const T=M.half*2;
+  const present=all.filter(p=>M.present[p.id]);
+  const lateAt=id=>Math.max(0,Math.round(+M.late[id]||0));
+  const injAt=id=>{const v=M.injured[id];return(v===undefined||v===null||v==='')?null:Math.max(0,Math.round(+v));};
+  const nz=(id,salt)=>hash(M.seed+':'+id+':'+salt);
+  const avail0=present.filter(p=>lateAt(p.id)===0&&!(injAt(p.id)!==null&&injAt(p.id)<=0));
+  const field=pickStarters(avail0,slots,M);
+  const st={},mins={},subbedOff=new Set();
+  present.forEach(p=>{mins[p.id]=0;st[p.id]=lateAt(p.id)>0?'late':'bench';const i=injAt(p.id);if(i!==null&&i<=0)st[p.id]='out';});
+  field.forEach(p=>{if(p)st[p.id]='field';});
+  let hist=null;let used=0;
+  const moveBad={};
+  const setSlot=(si,p,t,kind)=>{const h=hist[si];if(h.length)h[h.length-1].to=t;field[si]=p;if(p)h.push({p,from:t,to:T,kind:kind||'sub'});};
+  const place=(si,p,t,kind)=>{if(t===0)field[si]=p;else setSlot(si,p,t,kind);};
+  // manual changes (drag/tap on the pitch) at time t
+  const applyMoves=(t,entry)=>{
+    M.moves.filter(m=>m.t===t).forEach(m=>{
+      const a=present.find(p=>p.id===m.a),b=m.b?present.find(p=>p.id===m.b):null;
+      const ok=p=>p&&(st[p.id]==='field'||st[p.id]==='bench');
+      if(!ok(a)||(m.b&&!ok(b))){moveBad[m.id]=true;return;}
+      const ai=field.indexOf(a);let bi=b?field.indexOf(b):(m.si!=null&&m.si<slots.length&&!field[m.si]?m.si:-2);
+      if(bi===-2||(ai<0&&bi<0)){moveBad[m.id]=true;return;}
+      if(ai>=0&&bi>=0){ // both on the pitch: position change
+        if(b){place(ai,b,t,'move');place(bi,a,t,'move');}else{place(ai,null,t);place(bi,a,t,'move');}
+        entry.items.push({kind:'move',a,b,aTo:slots[bi],bTo:b?slots[ai]:null,mid:m.id});
+      }else{ // one on, one off: manual sub
+        const fp=ai>=0?a:b,bp=ai>=0?b:a,si=ai>=0?ai:bi;
+        place(si,bp,t,'manual');st[bp.id]='field';if(fp){st[fp.id]='bench';subbedOff.add(fp.id);}if(t>0)used++;
+        entry.items.push({kind:'msub',on:bp,off:fp,slot:slots[si],mid:m.id});
+      }
+    });
+  };
+  const startEntry={t:0,items:[],window:false};
+  applyMoves(0,startEntry);
+  const starters=field.slice();
+  hist=slots.map((s,i)=>field[i]?[{p:field[i],from:0,to:T,kind:'start'}]:[]);
+  const windows=[...new Set(M.windows.filter(t=>t>0&&t<T))].sort((a,b)=>a-b);
+  const nw=Math.max(1,windows.length);
+  const per=windows.map((_,i)=>Math.floor(M.subs/nw)+(i<M.subs%nw?1:0));
+  const pts=new Set(windows);
+  present.forEach(p=>{const l=lateAt(p.id);if(l>0&&l<T)pts.add(l);const i=injAt(p.id);if(i!==null&&i>0&&i<T)pts.add(i);});
+  const times=[...pts].sort((a,b)=>a-b);
+  let last=0,carry=0,overLimit=false;const timeline=[];
+  if(startEntry.items.length)timeline.push(startEntry);
+  M.moves.forEach(m=>{if(m.t!==0&&!windows.includes(m.t))moveBad[m.id]=true;});
+  // equal-time targets: share of each player's available minutes
+  const availMin=p=>Math.max(0,(injAt(p.id)===null?T:Math.min(T,injAt(p.id)))-lateAt(p.id));
+  const nonAnch=present.filter(p=>!M.anchor[p.id]);
+  const anchAvail=present.filter(p=>M.anchor[p.id]&&availMin(p)>0).length;
+  const sumAvail=nonAnch.reduce((a,p)=>a+availMin(p),0)||1;
+  const share=Math.min(1,Math.max(0,(slots.length-anchAvail))*T/sumAvail);
+  const target={};present.forEach(p=>target[p.id]=M.anchor[p.id]?availMin(p):share*availMin(p));
+  const credit=t=>{field.forEach(p=>{if(p)mins[p.id]+=t-last;});last=t;};
+  const benchPool=excl=>present.filter(p=>st[p.id]==='bench'&&!excl.has(p.id)&&(M.rolling||!subbedOff.has(p.id)));
+  for(const t of times){
+    credit(t);
+    const entry={t,items:[],window:false};
+    present.forEach(p=>{if(st[p.id]==='late'&&lateAt(p.id)<=t){st[p.id]='bench';entry.items.push({kind:'arrive',p});}});
+    present.forEach(p=>{
+      const i=injAt(p.id);if(i===null||i>t||st[p.id]==='out')return;
+      if(st[p.id]==='field'){
+        const si=field.indexOf(p);st[p.id]='out';
+        let best=null;benchPool(new Set()).forEach(b=>{const v=3*fit(b,slots[si])-mins[b.id]/5+nz(b.id,'i'+t);if(!best||v>best.v)best={v,b};});
+        if(best){setSlot(si,best.b,t);st[best.b.id]='field';used++;const over=!M.equal&&used>M.subs;if(over)overLimit=true;
+          hist[si][hist[si].length-1].kind='inj';
+          entry.items.push({kind:'inj',on:best.b,off:p,slot:slots[si],over});}
+        else{setSlot(si,null,t);entry.items.push({kind:'short',off:p,slot:slots[si]});}
+      }else{st[p.id]='out';entry.items.push({kind:'injbench',p});}
+    });
+    const wi=windows.indexOf(t);
+    if(wi>=0&&M.equal){
+      entry.window=true;
+      const nextT=times.find(x=>x>t&&windows.includes(x))||T;const L=nextT-t;
+      const cands=present.filter(p=>st[p.id]==='field'||st[p.id]==='bench');
+      const prio=p=>M.anchor[p.id]?1e6:(target[p.id]-mins[p.id])+(st[p.id]==='field'?L*0.5:0)+nz(p.id,'e'+t)*0.1;
+      const rotSlots=field.map((p,si)=>(!p||!M.anchor[p.id])?si:-1).filter(si=>si>=0);
+      const fieldAnch=field.filter(p=>p&&M.anchor[p.id]);
+      const ranked=cands.filter(p=>!fieldAnch.includes(p)).sort((a,b)=>prio(b)-prio(a));
+      const chosen=new Set(ranked.slice(0,rotSlots.length).map(p=>p.id));
+      let inc=ranked.filter(p=>chosen.has(p.id)&&st[p.id]==='bench');
+      const doSwap=(si,b,f)=>{setSlot(si,b,t);st[b.id]='field';if(f){st[f.id]='bench';subbedOff.add(f.id);}used++;
+        entry.items.push(f?{kind:'sub',on:b,off:f,slot:slots[si]}:{kind:'fill',on:b,slot:slots[si]});};
+      // fill empty positions first
+      field.forEach((p,si)=>{if(p||!inc.length)return;let best=null;inc.forEach(b=>{const v=fit(b,slots[si]);if(!best||v>best.v)best={v,b};});inc=inc.filter(x=>x!==best.b);doSwap(si,best.b,null);});
+      if(inc.length){
+        // who comes off: lowest priority, but among near-equal players prefer the position that suits the incoming sub
+        const fOut=rotSlots.filter(si=>field[si]&&!M.anchor[field[si].id]).sort((a,b)=>prio(field[a])-prio(field[b]));
+        const thr=fOut.length?prio(field[fOut[Math.min(inc.length,fOut.length)-1]]):0;
+        let pool=fOut.filter(si=>prio(field[si])<=thr+5);
+        inc.sort((a,b)=>prio(b)-prio(a));
+        for(const b of inc){
+          let best=null;
+          pool.forEach(si=>{if(slots[si].line===0&&!(b.lines||[]).includes(0))return;
+            const v=3*fit(b,slots[si])-0.4*(prio(field[si])-thr);if(!best||v>best.v)best={v,si};});
+          if(!best)continue;
+          pool=pool.filter(x=>x!==best.si);doSwap(best.si,b,field[best.si]);
+        }
+      }
+    }
+    else if(wi>=0){
+      entry.window=true;
+      const allowed=Math.max(0,Math.min(per[wi]+carry,M.subs-used));entry.noneLeft=allowed===0&&M.subs>0;
+      const justOn=new Set(),justOff=new Set();let done=0;
+      while(done<allowed){
+        const pool=benchPool(justOff);if(!pool.length)break;
+        pool.sort((a,b)=>mins[a.id]-mins[b.id]||nz(a.id,'b')-nz(b.id,'b'));
+        let swap=null;
+        for(const b of pool){
+          let best=null;
+          field.forEach((f,si)=>{
+            if(!f||M.anchor[f.id]||justOn.has(f.id))return;
+            if(slots[si].line===0&&!(b.lines||[]).includes(0))return;
+            const gap=mins[f.id]-mins[b.id];
+            if(gap<=0||(gap<5&&mins[b.id]>0))return;
+            const v=mins[f.id]+3*fit(b,slots[si])+nz(f.id,'f'+t);
+            if(!best||v>best.v)best={v,si,f};
+          });
+          if(best){swap={b,si:best.si,f:best.f};break;}
+        }
+        if(!swap)break;
+        setSlot(swap.si,swap.b,t);st[swap.b.id]='field';st[swap.f.id]='bench';
+        subbedOff.add(swap.f.id);justOn.add(swap.b.id);justOff.add(swap.f.id);
+        entry.items.push({kind:'sub',on:swap.b,off:swap.f,slot:slots[swap.si]});done++;used++;
+      }
+      carry=Math.max(0,per[wi]+carry-done);
+    }
+    if(wi>=0)applyMoves(t,entry);
+    if(entry.items.length||entry.window)timeline.push(entry);
+  }
+  credit(T);
+
+  const warnings=[];
+  if(!all.length)warnings.push('No players on the panel yet. Add them on the Panel tab.');
+  else if(!present.length)warnings.push('Nobody ticked as here yet. Use the Match tab.');
+  else{
+    if(avail0.length<slots.length)warnings.push(`Only ${avail0.length} available at throw-in for ${slots.length} positions. Empty positions are marked.`);
+    if(!present.some(p=>(p.lines||[]).includes(0)))warnings.push('Nobody here is listed as a goalkeeper.');
+    const never=present.filter(p=>st[p.id]!=='out'&&mins[p.id]===0&&!starters.includes(p));
+    if(never.length)warnings.push(`Won't get on with this plan: ${never.map(p=>esc(p.name)).join(', ')}. Add subs or another window.`);
+    if((M.equal||M.subs>0)&&!windows.length)warnings.push('No sub windows set. Add some times on the Match tab.');
+    if(overLimit&&!M.equal)warnings.push('Injury replacements take you past the sub limit.');
+    if(M.equal&&windows.length<2)warnings.push('Add more sub windows to spread minutes evenly.');
+    const unused=M.subs-used;
+    const benchLeft=present.filter(p=>!starters.includes(p)&&st[p.id]!=='out').length;
+    if(!M.equal&&unused>0&&benchLeft>0&&!never.length&&windows.length)warnings.push(`${unused} sub${unused>1?'s':''} not used — minutes are already as even as the windows allow.`);
+  }
+  const bounds=[0,...windows,T];const periods=[];
+  for(let i=0;i<bounds.length-1;i++){const a=bounds[i],b=bounds[i+1];
+    const on=new Set();hist.forEach(h=>h.forEach(x=>{if(x.from<=a&&x.to>a)on.add(x.p.id);}));
+    const at=hist.map(h=>{const x=h.filter(x=>x.from<=a&&x.to>a).pop();return x||null;});
+    const off=[],notYet=[];
+    present.forEach(p=>{const ij=injAt(p.id);if(ij!==null&&ij<=a)return;if(on.has(p.id))return;if(lateAt(p.id)>a)notYet.push(p);else off.push(p);});
+    periods.push({a,b,off,notYet,at});}
+  return {moveBad,bounds,periods,slots,starters,field,hist,timeline,mins,present,st,used,T,warnings,avail0,windows,lateAt,injAt};
+}
+
+/* ---------- persistence ---------- */
+let db=null,refs={},saving={panel:false,match:false},dirty={panel:false,match:false},timers={},readOnly=false,gotRemote={panel:false,match:false};
+function lsSave(){try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}}
+function persist(which){
+  lsSave();
+  if(!db||readOnly)return;
+  dirty[which]=true;clearTimeout(timers[which]);timers[which]=setTimeout(()=>flush(which),600);
+}
+async function flush(which){
+  if(saving[which]){timers[which]=setTimeout(()=>flush(which),400);return;}
+  if(!dirty[which])return;
+  dirty[which]=false;saving[which]=true;
+  try{await refs[which].set(JSON.parse(JSON.stringify(state[which])));setSync('live');}
+  catch(e){
+    if(e&&e.code==='invalid_argument'){readOnly=true;setSync('readonly');}
+    else if(e&&e.code==='unavailable'){dirty[which]=true;timers[which]=setTimeout(()=>flush(which),1500+Math.random()*1000);}
+    else setSync('error');
+  }
+  saving[which]=false;
+}
+function setSync(s){if(ui.sync===s)return;ui.sync=s;const el=$('#sync');if(el)el.outerHTML=syncPill();}
+function syncPill(){
+  const m={local:['','Saved on this phone'],live:['live','● Shared live'],readonly:['warn','View only'],error:['warn','Not syncing'],loading:['','Connecting…']}[ui.sync]||['',''];
+  return `<span id="sync" class="pill ${m[0]}">${m[1]}</span>`;
+}
+async function initDb(){
+  if(!window.claude||typeof window.claude.use!=='function')return;
+  try{db=await window.claude.use('db');}catch(e){db=null;}
+  if(!db)return;
+  setSync('loading');
+  try{const u=await window.claude.use('user');if(u&&typeof u.can==='function'){const c=await u.can('data.write');if(c===false){readOnly=true;}}}catch(e){}
+  refs.panel=db.doc('squad/panel');refs.match=db.doc('squad/match');
+  const timer=setTimeout(()=>{if(!gotRemote.panel)setSync('error');},10000);
+  ['panel','match'].forEach(which=>{
+    refs[which].onSnapshot(snap=>{
+      if(snap.metadata&&snap.metadata.hasPendingWrites)return;
+      if(dirty[which]||saving[which])return;
+      if(snap.exists){
+        const data=JSON.parse(JSON.stringify(snap.data()||{}));
+        state[which]=which==='panel'?normPanel(data):normMatch(data);
+        lsSave();scheduleRender();
+      }else if(!(snap.metadata&&snap.metadata.fromCache)&&!gotRemote[which]){
+        // empty shared store: seed it from what this phone has
+        const has=which==='panel'?state.panel.players.length>0:Object.keys(state.match.present).length>0;
+        if(has&&!readOnly)persist(which);
+      }
+      if(!(snap.metadata&&snap.metadata.fromCache)){gotRemote[which]=true;clearTimeout(timer);setSync(readOnly?'readonly':'live');}
+    },err=>{clearTimeout(timer);setSync('error');});
+  });
+}
+
+/* ---------- render ---------- */
+let pendingRender=false;
+function scheduleRender(){
+  const a=document.activeElement;
+  if(a&&$('#app').contains(a)&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&a.type!=='checkbox'))){pendingRender=true;return;}
+  render();
+}
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pendingRender=false;scheduleRender();}},50);});
+
+function render(){
+  if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
+  const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
+  $('#app').innerHTML=`<header><h1>GAA <span>Sub Planner</span></h1>${syncPill()}</header><main>${v}</main>${navView()}${sheetView()}`;
+}
+function navView(){
+  const pc=state.panel.players.length;
+  const here=state.panel.players.filter(p=>state.match.present[p.id]).length;
+  const b=(k,big,lab)=>`<button data-a="tab" data-v="${k}" class="${ui.tab===k?'on':''}"><b>${big}</b>${lab}</button>`;
+  return `<nav class="tabs"><div class="in">${b('panel',pc,'Panel')}${b('match',here,'Here today')}${b('plan','▶','Plan')}</div></nav>`;
+}
+function posTags(p){
+  if(!(p.lines||[]).length)return `<span class="tag" style="background:#fdecc8;color:#7a5200">no position</span>`+(p.side&&p.side!=='E'?` <span class="tag s">${p.side}</span>`:'');
+  const t=(p.lines||[]).slice().sort().map(l=>`<span class="tag">${LINES[l].short}</span>`).join(' ');
+  return t+(p.side&&p.side!=='E'?` <span class="tag s">${p.side}</span>`:'');
+}
+function lineChips(sel,act,id){
+  return LINES.map((l,i)=>`<button class="chip ${sel.includes(i)?'on':''}" data-a="${act}" data-id="${id||''}" data-v="${i}">${l.short}</button>`).join('');
+}
+function sideChips(sel,act,id){
+  return Object.keys(SIDES).map(k=>`<button class="chip side ${sel===k?'on':''}" data-a="${act}" data-id="${id||''}" data-v="${k}">${SIDES[k]}</button>`).join('');
+}
+function sortedPlayers(){
+  const prim=p=>p.lines&&p.lines.length?Math.min(...p.lines):9;
+  return state.panel.players.slice().sort((a,b)=>prim(a)-prim(b)||a.name.localeCompare(b.name));
+}
+
+function panelView(){
+  const ps=sortedPlayers();
+  let h=`<div class="card"><h2>Add a player</h2>
+    <input type="text" id="addName" data-f="addName" placeholder="Name" value="${esc(ui.addName)}" autocomplete="off">
+    <div class="lbl" style="margin-top:12px">Usually plays (tap all that apply)</div>
+    <div class="chips">${lineChips(ui.addLines,'addLine')}</div>
+    <div class="lbl">Side</div>
+    <div class="chips">${sideChips(ui.addSide,'addSide')}</div>
+    <button class="btn wide" style="margin-top:14px" data-a="addPlayer">Add to panel</button>
+    <details style="margin-top:14px" ${ui.bulkOpen?'open':''}><summary data-a="bulkToggle">Paste a whole list instead</summary>
+      <p class="small muted">One player per line: <b>Name, positions, side</b>. e.g.<br>Seán Murphy, HF MID, L<br>Cian Byrne, goalkeeper<br>Oisín Kelly, half back full back, R</p>
+      <textarea data-f="bulk" placeholder="Paste names here">${esc(ui.bulk)}</textarea>
+      <button class="btn wide" style="margin-top:8px" data-a="bulkAdd">Add these players</button>
+    </details>
+  </div>`;
+  h+=`<div class="card"><h2>Panel <span class="muted small">${ps.length} players</span><span class="sp"></span>${ps.length?'<button class="btn alt sm" data-a="copyPanel">Copy list</button>':''}</h2>`;
+  if(!ps.length){
+    h+=`<div class="empty-state"><div class="big">No players yet</div>Import a ClubZap RSVP report or add players above.<br><br><button class="btn alt sm" data-a="sample">Load a sample squad</button> to try it out.</div>`;
+  }else{
+    h+='<ul class="plist">'+ps.map(p=>{
+      const open=ui.editing===p.id;
+      let r=`<li><div class="prow"><span class="nm">${esc(p.name)}</span>${posTags(p)}<button class="iconbtn" data-a="edit" data-id="${p.id}" aria-label="Edit">${open?'✓':'✎'}</button></div>`;
+      if(open){
+        r+=`<div class="edit"><input type="text" data-f="pname" data-id="${p.id}" value="${esc(p.name)}">
+          <div class="lbl">Positions</div><div class="chips">${lineChips(p.lines,'pLine',p.id)}</div>
+          <div class="lbl">Side</div><div class="chips">${sideChips(p.side,'pSide',p.id)}</div>
+          <div class="row" style="margin-top:12px">${ui.confirmDel===p.id
+            ?`<span class="small grow">Remove ${esc(p.name)} from the panel?</span><button class="btn alt sm" data-a="delNo">Keep</button><button class="btn warn sm" data-a="delYes" data-id="${p.id}">Remove</button>`
+            :`<button class="btn alt sm" data-a="del" data-id="${p.id}">Remove player</button>`}</div></div>`;
+      }
+      return r+'</li>';
+    }).join('')+'</ul>';
+  }
+  h+='</div>';
+  h+=`<div class="card"><h2>Import from ClubZap</h2><p class="small muted" style="margin-top:0">Pick an RSVP report (.csv). Adds anyone not already on the panel — nobody is removed.</p>
+    <label class="btn alt wide" style="display:block;text-align:center">Choose RSVP report<input type="file" accept=".csv,text/csv,text/plain" data-f="rsvpPanel" hidden></label>
+    ${ui.panelMsg?`<div class="warnbox" style="margin-bottom:0">${ui.panelMsg}</div>`:''}</div>`;
+  h+=syncCard();
+  return h;
+}
+function syncCard(){
+  return `<div class="card"><h2>Share with other mentors</h2><p class="small muted" style="margin-top:0">Send a link that loads this whole setup — panel, who's here, formation and subs — on another phone.</p>
+    <div class="row"><button class="btn grow" data-a="send">📲 Send to another phone</button><button class="btn alt" data-a="pasteOpen">Load from a link</button></div></div>`;
+}
+
+function rsvpTag(c){return c==='A'?'<span class="tag" style="background:#dff2e5;color:#17663a">RSVP ✓</span>':c==='X'?'<span class="tag" style="background:#fbe1dc;color:#a8321f">not coming</span>':'<span class="tag" style="background:#eceee9;color:#7a857c">no reply</span>';}
+function stepper(act,val,extra){return `<div class="stepper"><button data-a="${act}" data-v="-1" ${extra||''}>−</button><span>${val}</span><button data-a="${act}" data-v="1" ${extra||''}>+</button></div>`;}
+
+function formationControl(){
+  const M=state.match,cur=M.form.join('-');
+  const pres=[...new Set([...(PRESETS[M.size]||[]),cur])];
+  return `<div class="lbl">Formation <span style="text-transform:none;font-weight:500">GK-FB-HB-MID-HF-FF · ${M.size}-a-side</span></div>
+    <div class="chips">${pres.map(f=>`<button class="chip ${f===cur?'on':''}" data-a="formSet" data-v="${f}">${f}</button>`).join('')}
+    <input type="text" data-f="formText" placeholder="type e.g. 1-2-3-2-3-2" style="width:190px;padding:6px 10px" autocomplete="off"></div>`;
+}
+function subPlanControl(full){
+  const M=state.match;
+  let h=`<div class="lbl">Sub plan</div><div class="seg"><button class="${M.equal?'on':''}" data-a="mode" data-v="eq">Equal time</button><button class="${M.equal?'':'on'}" data-a="mode" data-v="fixed">Set no. of subs</button></div>
+  <div class="small muted" style="margin-top:6px">${M.equal?'Everyone except ⚓ anchors gets about the same minutes. No limit on subs.':'Makes at most the number of subs you set, spreading minutes as evenly as it can.'}</div>`;
+  if(full&&!M.equal)h+=`<div class="row" style="margin-top:10px"><div><div class="lbl" style="margin-top:0">Subs allowed</div>${stepper('subs',M.subs)}</div></div>
+    <button class="toggle" data-a="rolling" style="margin-top:6px"><span class="sw-ui ${M.rolling?'on':''}"></span><span><b>Players can come back on</b></span></button>`;
+  return h;
+}
+function matchView(){
+  const M=state.match,ps=sortedPlayers();
+  const here=ps.filter(p=>M.present[p.id]).length;
+  const T=M.half*2;
+  let h=`<div class="card"><h2>Match</h2>
+    <div class="grid2"><input type="text" data-f="opp" placeholder="Opposition" value="${esc(M.opp)}"><input type="date" data-f="date" value="${esc(M.date)}"></div>
+    <div class="lbl">Team size</div>
+    <div class="seg">${[7,9,11,13,15].map(n=>`<button class="${M.size===n?'on':''}" data-a="size" data-v="${n}">${n}</button>`).join('')}</div>
+    ${formationControl()}
+    <div class="lbl">Half length (mins)</div>${stepper('half',M.half)}
+    <div class="lbl">Change times <span style="text-transform:none;font-weight:500">(minutes into the game; ${T} total)</span></div>
+    <div class="chips">${M.windows.slice().sort((a,b)=>a-b).map(t=>`<button class="chip on" data-a="winDel" data-v="${t}">${minLabel(t,M)} ✕</button>`).join('')}
+      <input type="number" inputmode="decimal" step="0.5" data-f="winNew" placeholder="+ min" style="width:84px;padding:6px 10px" min="1" max="${T-1}">
+      <button class="chip ${isQuarters(M)?'on':''}" data-a="winQ">Quarters</button></div>
+    <div style="margin-top:12px">${subPlanControl(true)}</div>
+  </div>`;
+  h+=`<div class="card"><h2><span class="counter">${here}</span> here <span class="muted small">of ${ps.length}</span><span class="sp"></span>
+      <button class="btn alt sm" data-a="allIn">All</button><button class="btn alt sm" data-a="allOut">None</button></h2>
+      <label class="btn alt wide" style="display:block;text-align:center;margin-bottom:8px">📋 Load ClubZap RSVP report (night before)<input type="file" accept=".csv,text/csv,text/plain" data-f="rsvpMatch" hidden></label>
+      ${ui.rsvpMsg?`<div class="warnbox" style="margin-top:0">${ui.rsvpMsg}</div>`:''}
+      <details ${ui.availOpen?'open':''} style="margin:0 0 10px"><summary data-a="availToggle">Paste an availability list (ClubZap, WhatsApp…)</summary>
+        <p class="small muted">One name per line or separated by commas. Ticks exactly these players and unticks everyone else.</p>
+        <textarea data-f="avail" placeholder="Paste names here">${esc(ui.avail||'')}</textarea>
+        <button class="btn wide" style="margin-top:8px" data-a="availApply">Tick these players</button>
+        ${ui.availMsg?`<div class="warnbox" style="margin-bottom:0">${ui.availMsg}</div>`:''}
+      </details>
+      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. ⚓ plays the whole match · <b>B</b> starts on the bench · ⏱ late or injured.</p>`;
+  if(!ps.length)h+=`<div class="empty-state">Add players on the Panel tab first.</div>`;
+  ps.forEach(p=>{
+    const on=!!M.present[p.id];
+    const timed=M.late[p.id]||(M.injured[p.id]!==undefined&&M.injured[p.id]!=='');
+    h+=`<div class="att ${on?'':'absent'}"><button class="who" data-a="present" data-id="${p.id}"><span class="tick ${on?'on':''}">${on?'✓':''}</span><span class="grow" style="min-width:0"><span class="nm" style="display:block">${esc(p.name)}</span>${on||M.rsvp[p.id]?`<span class="small" style="display:block;margin-top:2px">${M.rsvp[p.id]?rsvpTag(M.rsvp[p.id])+' ':''}${on?posTags(p):''}</span>`:''}</span></button>
+      ${on?`
+      <button class="iconbtn ${M.anchor[p.id]?'on':''}" data-a="anchor" data-id="${p.id}" aria-label="Plays full match">⚓</button>
+      <button class="iconbtn ${M.benchStart[p.id]?'on2':''}" data-a="bench" data-id="${p.id}" aria-label="Start on bench">B</button>
+      <button class="iconbtn ${timed?'on3':''}" data-a="timing" data-id="${p.id}" aria-label="Late or injured">⏱</button>`:''}</div>`;
+    if(on&&ui.timing===p.id){
+      h+=`<div class="timing"><div><label>Arrives at minute</label><input type="number" inputmode="numeric" data-f="late" data-id="${p.id}" value="${esc(M.late[p.id]||'')}" placeholder="on time"></div>
+        <div><label>Off injured at minute</label><input type="number" inputmode="numeric" data-f="inj" data-id="${p.id}" value="${esc(M.injured[p.id]===undefined?'':M.injured[p.id])}" placeholder="—"></div></div>`;
+    }
+  });
+  h+=`</div>`;
+  if(ps.length)h+=`<button class="btn acc wide" data-a="tab" data-v="plan" style="margin:6px 0 10px">See the plan ▶</button>`;
+  h+=`<div class="card"><h2>New match</h2><p class="small muted" style="margin-top:0">Clears attendance, anchors, late/injured and ticks. Keeps the panel and settings.</p>
+    ${ui.confirmReset?`<div class="row"><span class="grow small">Clear everything for a new match?</span><button class="btn alt sm" data-a="resetNo">Cancel</button><button class="btn warn sm" data-a="resetYes">Clear</button></div>`:`<button class="btn alt" data-a="reset">Start a new match</button>`}</div>`;
+  return h;
+}
+
+function planView(){
+  const M=state.match,P=simulate();
+  if(!state.panel.players.length||!P.present.length){
+    return `<div class="card"><div class="empty-state"><div class="big">Nothing to plan yet</div>${!state.panel.players.length?'Add your panel first.':'Tick who is here on the <b>Here today</b> tab.'}<br><br><button class="btn" data-a="tab" data-v="${state.panel.players.length?'match':'panel'}">Go</button></div></div>`;
+  }
+  const bench0=P.avail0.filter(p=>!P.starters.includes(p));
+  const late=P.present.filter(p=>P.lateAt(p.id)>0);
+  const subsPlanned=P.timeline.reduce((a,e)=>a+e.items.filter(i=>i.kind==='sub'||i.kind==='inj'||i.kind==='fill'||(i.kind==='msub'&&e.t>0)).length,0);
+  let h=`<div class="row" style="margin:6px 0 2px"><div class="grow"><div style="font-family:'Barlow Condensed';font-size:22px;line-height:1.1">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${M.date?esc(new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}))+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div></div>
+    <button class="btn alt sm" data-a="shuffle" title="Try a different combination">↻</button><button class="btn alt sm" data-a="send" title="Send the whole setup to another phone">📲 Send</button><button class="btn sm" data-a="whatsapp">WhatsApp text</button></div>`;
+  h+=`<div class="card" style="padding:10px 14px">${formationControl()}${subPlanControl(false)}</div>`;
+  h+=`<div class="summary" style="margin-top:8px">
+    <div class="stat"><b>${P.present.length}</b><span>here</span></div>
+    <div class="stat"><b>${bench0.length+late.length}</b><span>on bench</span></div>
+    <div class="stat"><b>${M.equal?subsPlanned:subsPlanned+'/'+M.subs}</b><span>${M.equal?'subs needed':'subs used'}</span></div>
+    <div class="stat"><b>${P.timeline.filter(e=>e.window).length}</b><span>windows</span></div>
+    <div class="stat"><b>${Object.keys(M.anchor).filter(id=>M.present[id]).length}</b><span>anchors</span></div></div>`;
+  if(P.warnings.length)h+=`<div class="warnbox">${P.warnings.map(w=>`<div>⚠️ ${w}</div>`).join('')}</div>`;
+  // pitch for the chosen period
+  const vi=Math.min(ui.view||0,P.periods.length-1);const pr=P.periods[vi];
+  const selKey=ui.sel?(ui.sel.slot!=null?'s'+ui.sel.slot:'p'+ui.sel.pid):'';
+  h+=`<div class="row" style="margin-top:12px"><div class="seg grow">${P.periods.map((x,i)=>`<button class="${i===vi?'on':''}" data-a="view" data-v="${i}">${periodName(i,x.a,x.b,M)}</button>`).join('')}</div></div>`;
+  h+=`<div class="hint">${ui.sel?'Now tap another position or a bench player to swap · tap again to cancel':'Tap a player, then another, to swap — or press and hold to drag. Changes apply from '+(vi===0?'the start':periodName(vi,pr.a,pr.b,M))+'.'}</div>`;
+  h+=`<div class="pitch">`;
+  LINES.forEach((l,li)=>{
+    const ss=P.slots.filter(s=>s.line===li);if(!ss.length)return;
+    h+=`<div class="lineTag">${l.name}</div><div class="lineRow">`+ss.map(s=>{
+      const seg=pr.at[s.id];const p=seg?seg.p:null;
+      const bad=p&&fit(p,s)<0;
+      let chg='';
+      if(vi===0){
+        chg=P.hist[s.id].filter(x=>x.from>0&&x.to>x.from).map(x=>`<div class="chg ${x.kind==='inj'?'inj':x.kind==='move'?'mv':''}">${x.kind==='move'?'↔ ':''}${fm(x.from)}' ${esc(shortName(x.p.name))}</div>`).join('');
+      }else if(seg&&seg.from===pr.a&&pr.a>0){
+        chg=`<div class="chg ${seg.kind==='move'?'mv':seg.kind==='inj'?'inj':''}">${seg.kind==='move'?'↔ moved here':seg.kind==='manual'?'▲ on (your change)':'▲ comes on'}</div>`;
+      }
+      return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" data-a="pick" data-slot="${s.id}" data-dz="1"><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.anchor[p.id]?' <span class="anc">⚓</span>':''}</div>${chg}</div>`;
+    }).join('')+`</div>`;
+  });
+  h+=`<div class="benchStrip"><div class="lineTag" style="margin-top:4px">Bench · ${periodName(vi,pr.a,pr.b,M)}</div><div class="lineRow" style="flex-wrap:wrap">${pr.off.map(p=>`<div class="bchip ${selKey==='p'+p.id?'sel':''}" data-a="pick" data-pid="${p.id}" data-dz="1">${esc(shortName(p.name))}</div>`).join('')||'<span style="color:rgba(255,255,255,.7);font-size:13px">Nobody — all on</span>'}${pr.notYet.map(p=>`<div class="bchip late">${esc(shortName(p.name))} · late</div>`).join('')}</div></div>`;
+  h+=`</div><div class="legend"><span><b style="color:var(--on)">20' Name</b> = comes on</span><span><b style="color:var(--muted)">↔</b> = your position change</span><span>⚓ full match</span><span>Red outline = out of usual position</span></div>`;
+  // who sits out each period
+  h+=`<div class="card"><h2>Off each ${isQuarters(M)?'quarter':'period'}</h2><ul class="tl">`+P.periods.map((pr,i)=>`<li><div class="t" style="font-size:20px">${periodName(i,pr.a,pr.b,M)}</div><div class="grow" style="padding-top:2px">${pr.off.length?pr.off.map(p=>`<span class="tag" style="font-size:14px;padding:4px 8px;margin:0 4px 4px 0;display:inline-block">${esc(shortName(p.name))}</span>`).join(''):'<span class="muted small">Nobody — all on</span>'}${pr.notYet.length?`<div class="small muted">Not here yet: ${pr.notYet.map(p=>esc(shortName(p.name))).join(', ')}</div>`:''}</div></li>`).join('')+`</ul></div>`;
+  // timeline
+  h+=`<div class="card"><h2>Substitutions / changes</h2>`;
+  const badMoves=M.moves.filter(m=>P.moveBad[m.id]);
+  if(badMoves.length)h+=`<div class="warnbox" style="margin-top:0">${badMoves.length} of your changes no longer fit the plan (someone's attendance or the change times changed). <button class="btn alt sm" data-a="clearBad">Remove them</button></div>`;
+  if(!P.timeline.length)h+=`<span class="muted small">No subs scheduled.</span>`;
+  else{
+    h+='<ul class="tl">'+P.timeline.map(e=>{
+      const items=e.items.map((it,ix)=>{
+        if(it.kind==='arrive')return `<div class="sw"><span class="txt muted">${esc(it.p.name)} arrives — on the bench</span></div>`;
+        if(it.kind==='injbench')return `<div class="sw"><span class="txt muted">${esc(it.p.name)} unavailable (injured)</span></div>`;
+        if(it.kind==='fill')return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into empty #${it.slot.num} ${it.slot.label}</span></div>`;
+        if(it.kind==='move')return `<div class="sw mvrow"><span class="txt">↔ ${esc(shortName(it.a.name))} to ${it.aTo.label}${it.b?`, ${esc(shortName(it.b.name))} to ${it.bTo.label}`:''}</span><button class="undo" data-a="undoMove" data-v="${it.mid}" aria-label="Undo">Undo</button></div>`;
+        if(it.kind==='short')return `<div class="sw"><span class="txt"><span class="off-n">${esc(it.off.name)}</span> off injured — <b>nobody to bring on</b> (${it.slot.label})</span></div>`;
+        if(it.kind==='msub'&&!it.off)return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into #${it.slot.num} ${it.slot.label} <span class="tag">your change</span></span><button class="undo" data-a="undoMove" data-v="${it.mid}">Undo</button></div>`;
+        const key=e.t+'-'+it.on.id+'-'+it.off.id;const d=!!M.done[key];
+        return `<div class="sw ${d?'done':''}"><button class="tick ${d?'on':''}" data-a="done" data-v="${key}" aria-label="Done">${d?'✓':''}</button><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}${it.kind==='inj'?' · injury'+(it.over?' · over limit':''):''}${it.kind==='msub'?' · <span class="tag">your change</span>':''}</span></span>${it.kind==='msub'?`<button class="undo" data-a="undoMove" data-v="${it.mid}">Undo</button>`:''}</div>`;
+      }).join('')||`<div class="sw"><span class="txt muted small">${e.noneLeft?'No subs left':'No change needed'}</span></div>`;
+      return `<li><div class="t">${e.t===0?'Start':minLabel(e.t,M)}${e.t===M.half?'<small>'+fm(e.t)+"'</small>":''}${isQuarters(M)&&e.t!==M.half?'<small>'+(e.t<M.half?'Q2':'Q4')+'</small>':''}</div><div class="grow">${items}</div></li>`;
+    }).join('')+'</ul>';
+  }
+  h+=`</div>`;
+  // minutes
+  const rows=P.present.filter(p=>P.st[p.id]!==undefined).slice().sort((a,b)=>P.mins[b.id]-P.mins[a.id]||a.name.localeCompare(b.name));
+  h+=`<div class="card"><h2>Minutes</h2>`+rows.map(p=>`<div class="mbar"><span class="n">${M.anchor[p.id]?'⚓ ':''}${esc(p.name)}</span><span class="bar"><i class="${M.anchor[p.id]?'anc':''}" style="width:${Math.round(100*P.mins[p.id]/P.T)}%"></i></span><span class="m">${fm(P.mins[p.id])}'</span></div>`).join('')+`</div>`;
+  return h;
+}
+
+function sheetView(){
+  const S=ui.sheet;if(!S)return '';
+  let body='';
+  if(S.mode==='paste'){
+    body=`<textarea id="sheetText" data-f="pasteCode" placeholder="Paste the link or code here">${esc(ui.pasteCode||'')}</textarea>
+    <div class="row" style="margin-top:10px"><button class="btn grow" data-a="pasteLoad">Load it</button><button class="btn alt" data-a="sheetClose">Cancel</button></div>`;
+  }else if(S.mode==='confirm'){
+    body=`<div class="row" style="margin-top:6px"><button class="btn grow" data-a="importYes">Load it on this phone</button><button class="btn alt" data-a="sheetClose">Cancel</button></div>`;
+  }else{
+    body=`<textarea readonly id="sheetText">${esc(S.text)}</textarea>
+    <div class="row" style="margin-top:10px"><button class="btn grow" data-a="sheetCopy">Copy</button>${S.wa?`<a class="btn acc" style="text-decoration:none" href="${esc(S.wa)}" target="_blank" rel="noopener">Open WhatsApp</a>`:''}<button class="btn alt" data-a="sheetClose">Close</button></div>`;
+  }
+  return `<div class="sheet-bg" data-a="sheetBg"><div class="sheet"><h2 style="font-family:'Barlow Condensed';margin:0 0 8px">${esc(S.title)}</h2>
+    <p class="small muted" style="margin-top:0">${S.noteHtml||esc(S.note||'')}</p>${body}</div></div>`;
+}
+
+/* ---------- phone-to-phone sync (whole setup in a link) ---------- */
+const HOME_URL='https://nmmh.github.io/gaa-planner/';
+function shareBase(){return (location.protocol.indexOf('http')===0&&!/claude/i.test(location.hostname))?location.origin+location.pathname:HOME_URL;}
+function b64u(bytes){let s='';for(let i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function unb64u(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';const bin=atob(str);return Uint8Array.from(bin,c=>c.charCodeAt(0));}
+async function encodeState(){
+  const json=JSON.stringify({v:1,panel:state.panel,match:state.match});
+  if(window.CompressionStream){try{const buf=await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();return 'z'+b64u(new Uint8Array(buf));}catch(e){}}
+  return 'j'+b64u(new TextEncoder().encode(json));
+}
+async function decodeState(code){
+  code=String(code||'').replace(/\s+/g,'');const m=code.match(/[#&?]s=([A-Za-z0-9_-]+)/);if(m)code=m[1];
+  const kind=code[0],body=unb64u(code.slice(1));let json;
+  if(kind==='z')json=await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+  else if(kind==='j')json=new TextDecoder().decode(body);else throw new Error('bad code');
+  const o=JSON.parse(json);return {panel:normPanel(o.panel),match:normMatch(o.match)};
+}
+async function sendToPhone(){
+  const code=await encodeState();const link=shareBase()+'#s='+code;
+  const M=state.match;const msg=`📋 ${M.opp?'vs '+M.opp+' – ':''}tap to load the full plan (panel, who's here, subs):\n${link}`;
+  ui.sheet={mode:'copy',title:'Send to another phone',noteHtml:'Send this link to the other mentors. Opening it loads <b>everything</b> — panel, attendance, anchors, formation and your changes — on their phone. Send a new link whenever you change something.',text:msg,wa:'https://wa.me/?text='+encodeURIComponent(msg)};
+  render();
+}
+async function offerImport(code){
+  try{const d=await decodeState(code);ui.pending=d;
+    const here=d.panel.players.filter(p=>d.match.present[p.id]).length;
+    ui.sheet={mode:'confirm',title:'Load plan from another phone?',noteHtml:`${d.match.opp?'<b>vs '+esc(d.match.opp)+'</b> · ':''}${d.panel.players.length} players on the panel, ${here} ticked as here. This <b>replaces</b> the panel and match on this phone.`};
+  }catch(e){ui.sheet=null;toast("That link or code didn't work — ask for a fresh one");}
+  render();
+}
+function loadFromHash(){
+  const h=location.hash||'';if(!/[#&]s=/.test(h))return;
+  offerImport(h);
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+}
+
+/* ---------- RSVP report (ClubZap CSV) ---------- */
+function parseCSV(text){
+  const rows=[];let row=[],cell='',q=false;text=String(text).replace(/^﻿/,'');
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=c;}
+    else if(c==='"')q=true;else if(c===','){row.push(cell);cell='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';}
+    else cell+=c;}
+  if(cell||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+function cleanName(n){
+  return String(n).replace(/\s+/g,' ').trim().split(' ').map(w=>(w.length>1&&w===w.toUpperCase()&&/[A-Z]/.test(w))?w.toLowerCase().replace(/(^|['’-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()):w).join(' ');
+}
+function respCode(r){r=String(r).toLowerCase().trim();if(/not\s*attend|declin|unavail|^no\b|can'?t|absent/.test(r))return 'X';if(/attend|^yes|going|available|accept/.test(r))return 'A';return 'N';}
+const MONTHS=['january','february','march','april','may','june','july','august','september','october','november','december'];
+function parseRSVP(text){
+  const rows=parseCSV(text);
+  const hi=rows.findIndex(r=>r[0]&&r[0].trim().toLowerCase()==='name'&&r.some(c=>/response/i.test(c)));
+  if(hi<0)return null;
+  const ri=rows[hi].findIndex(c=>/response/i.test(c)),ti=rows[hi].findIndex(c=>/^\s*type\s*$/i.test(c));
+  let event='',start='';
+  rows.slice(0,hi).forEach(r=>{const k=(r[0]||'').trim().toLowerCase();if(k==='event')event=(r[1]||'').trim();if(k==='start')start=(r[1]||'').trim();});
+  const people=rows.slice(hi+1).filter(r=>r[0]&&r[0].trim()&&(ti<0||!r[ti]||/player/i.test(r[ti]))).map(r=>({name:cleanName(r[0]),resp:respCode(r[ri]||'')}));
+  let date='';const dm=start.match(/([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})/);
+  if(dm){const mi=MONTHS.findIndex(x=>x.startsWith(dm[1].toLowerCase().slice(0,3)));if(mi>=0)date=`${dm[3]}-${String(mi+1).padStart(2,'0')}-${String(dm[2]).padStart(2,'0')}`;}
+  const om=event.match(/\bv(?:s)?\.?\s+(.+)$/i);
+  return {event,opp:om?om[1].trim():'',date,people};
+}
+function findOrAdd(name,added){
+  const n=normName(name);let p=state.panel.players.find(x=>normName(x.name)===n);
+  if(!p){const r=matchNames(name);if(r.found.length===1&&!r.missing.length)p=r.found[0];}
+  if(!p){p={id:uid(),name:name.slice(0,60),lines:[],side:'E'};state.panel.players.push(p);added.push(p);}
+  return p;
+}
+function applyRSVP(r,toMatch){
+  const added=[];const M=state.match;const ids={};
+  r.people.forEach(x=>{const p=findOrAdd(x.name,added);ids[p.id]=x.resp;});
+  persist('panel');
+  if(!toMatch)return `Panel: added ${added.length} new player${added.length===1?'':'s'}, ${r.people.length-added.length} already on it.`+(added.length?' Set their positions below.':'');
+  M.present={};M.rsvp=ids;
+  Object.keys(ids).forEach(id=>{if(ids[id]==='A')M.present[id]=true;});
+  ['anchor','benchStart','late','injured'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));
+  M.moves=[];M.done={};
+  if(r.opp)M.opp=r.opp;if(r.date)M.date=r.date;
+  persist('match');
+  const c=k=>Object.values(ids).filter(v=>v===k).length;
+  return `<b>${c('A')} attending</b> ticked · ${c('N')} not replied · ${c('X')} not coming.`+(added.length?` Added ${added.length} new to the panel (${added.map(p=>esc(p.name)).join(', ')}) — set their positions on the Panel tab.`:'')+' Tick or untick on the day as needed.';
+}
+function readFile(input,cb){const f=input.files&&input.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{cb(String(fr.result));input.value='';};fr.readAsText(f);}
+
+/* ---------- text exports ---------- */
+function whatsappText(){
+  const M=state.match,P=simulate();
+  const L=[];
+  L.push(`📋 ${M.opp?'vs '+M.opp:'Match plan'}${M.date?' – '+new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):''}`);
+  L.push(`${P.slots.length}-a-side · 2×${M.half} mins · ${P.present.length} here`);
+  L.push('');L.push('*STARTING*');
+  LINES.forEach((l,li)=>{const ss=P.slots.filter(s=>s.line===li);if(!ss.length)return;
+    L.push(`${l.short}: `+ss.map(s=>{const p=P.starters[s.id];return `${s.num} ${p?shortName(p.name)+(M.anchor[p.id]?' ⚓':''):'—'}`;}).join(' · '));});
+  const bench0=P.avail0.filter(p=>!P.starters.includes(p));
+  const late=P.present.filter(p=>P.lateAt(p.id)>0);
+  L.push('');L.push('*BENCH*: '+([...bench0.map(p=>p.name),...late.map(p=>p.name+' (late '+P.lateAt(p.id)+"')")].join(', ')||'none'));
+  L.push('');L.push('*OFF EACH '+(isQuarters(M)?'QUARTER':'PERIOD')+'*');
+  P.periods.forEach((pr,i)=>L.push(`${periodName(i,pr.a,pr.b,M)}: ${pr.off.map(p=>shortName(p.name)).join(', ')||'nobody'}${pr.notYet.length?' (not here yet: '+pr.notYet.map(p=>shortName(p.name)).join(', ')+')':''}`));
+  L.push('');L.push('*SUBS / CHANGES*');
+  if(!P.timeline.length)L.push('none');
+  P.timeline.forEach(e=>{
+    const its=e.items.filter(i=>['sub','inj','fill','msub','move'].includes(i.kind));
+    if(!its.length)return;
+    L.push(`${e.t===0?'Start':minLabel(e.t,M)}${e.t===M.half?' ('+fm(e.t)+"')":''}`);
+    its.forEach(i=>L.push(i.kind==='move'?`  ↔ ${i.a.name} to ${i.aTo.label}${i.b?', '+i.b.name+' to '+i.bTo.label:''}`:`  ▲ ${i.on.name}${i.off?' for '+i.off.name:''} (${i.slot.label})${i.kind==='inj'?' – injury':''}`));
+  });
+  L.push('');L.push('*MINUTES*');
+  P.present.slice().sort((a,b)=>P.mins[b.id]-P.mins[a.id]).forEach(p=>L.push(`${fm(P.mins[p.id])}' ${p.name}`));
+  return L.join('\n');
+}
+function panelText(){
+  return sortedPlayers().map(p=>`${p.name}, ${(p.lines||[]).slice().sort().map(l=>LINES[l].short).join(' ')}${p.side!=='E'?', '+p.side:''}`).join('\n');
+}
+function parseBulk(text){
+  const out=[];
+  text.split(/\n+/).forEach(line=>{
+    line=line.trim().replace(/^\d+[\.\)]\s*/,'');if(!line)return;
+    const parts=line.split(/[,\t;|]/);const name=parts.shift().trim();if(!name)return;
+    let s=' '+parts.join(' ').toLowerCase()+' ';
+    s=s.replace(/half[\s-]*backs?/g,' hb ').replace(/half[\s-]*forwards?/g,' hf ').replace(/(full|corner)[\s-]*backs?/g,' fb ')
+       .replace(/(full|corner)[\s-]*forwards?/g,' ff ').replace(/midfield(er)?s?|centre[\s-]*field/g,' mid ')
+       .replace(/goal[\s-]*keeper|goalie|keeper|goals?/g,' gk ').replace(/\b(defen[cs]e|defender|back)s?\b/g,' fb hb ')
+       .replace(/\b(forward|attack|attacker)s?\b/g,' hf ff ');
+    const toks=s.split(/[^a-z]+/).filter(Boolean);
+    const map={gk:0,fb:1,hb:2,mid:3,mf:3,hf:4,ff:5,cf:5};
+    const lines=[];let side='E';
+    toks.forEach(t=>{if(t in map){if(!lines.includes(map[t]))lines.push(map[t]);}
+      else if(t==='l'||t==='left')side='L';else if(t==='r'||t==='right')side='R';});
+    out.push({id:uid(),name:name.slice(0,60),lines,side});
+  });
+  return out;
+}
+const SAMPLE=`Darragh Walsh, GK
+Cian Byrne, FB, L
+Oisín Kelly, FB HB, R
+Fionn Ryan, FB
+Conor Doyle, HB, L
+Eoin Murphy, HB MID
+Rory O'Brien, HB, R
+Seán Brennan, MID
+Tadhg Nolan, MID HF
+Cillian Daly, HF, L
+Liam Kavanagh, HF
+Jack Fitzgerald, HF FF, R
+Adam Power, FF, L
+Ciarán Moore, FF
+Pádraig Quinn, FF HF, R
+Niall Hayes, FB HB
+Aodhán Burke, HB MID, L
+Ben Whelan, HF MID, R
+Dylan Fahy, FF
+Mark Lynch, GK FB`;
+
+function normName(n){return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z' ]+/g,' ').replace(/'/g,'').replace(/\s+/g,' ').trim();}
+function matchNames(text){
+  const ps=state.panel.players.map(p=>({p,n:normName(p.name)}));
+  const found=[],missing=[];
+  text.split(/[\n,;]+/).forEach(raw=>{
+    let line=raw.replace(/^\s*\d+[\.\)]?\s*/,'').replace(/\b(available|yes|going|attending|confirmed)\b/gi,'').trim();
+    const n=normName(line);if(!n||n.length<2)return;
+    let hit=ps.filter(x=>x.n===n);
+    if(!hit.length)hit=ps.filter(x=>x.n.includes(n)||n.includes(x.n));
+    if(hit.length!==1){const t=n.split(' ');if(t.length>1)hit=ps.filter(x=>{const u=x.n.split(' ');return u[0]===t[0]&&u[u.length-1].startsWith(t[t.length-1][0])&&u[u.length-1].startsWith(t[t.length-1].replace(/\.$/,''));});}
+    if(hit.length===1){if(!found.includes(hit[0].p))found.push(hit[0].p);}else missing.push(line);
+  });
+  return {found,missing};
+}
+function makeMove(src,dst){
+  const M=state.match,P=simulate();
+  const vi=Math.min(ui.view||0,P.periods.length-1),pr=P.periods[vi],t=pr.a;
+  const at=si=>pr.at[si]?pr.at[si].p.id:null;
+  let a=src.slot!=null?at(src.slot):src.pid,b=dst.slot!=null?at(dst.slot):dst.pid,si=null;
+  if(!a&&!b)return;
+  if(!a){a=b;b=null;si=src.slot;}else if(!b){si=dst.slot;}
+  if(a===b)return;
+  if(src.pid&&dst.pid){toast('Pick a position on the pitch');return;}
+  if(si==null&&b==null)return;
+  // swapping the same pair back at the same time cancels the earlier change
+  const rev=M.moves.find(m=>m.t===t&&b&&((m.a===a&&m.b===b)||(m.a===b&&m.b===a)));
+  if(rev){M.moves=M.moves.filter(m=>m!==rev);toast('Change undone');}
+  else{const m={id:uid(),t,a};if(b)m.b=b;else m.si=si;M.moves.push(m);toast(src.pid||dst.pid?'Sub changed — plan redrawn':'Positions swapped');}
+  persist('match');
+}
+/* drag: mouse drags straight away; touch needs a short press-and-hold so the page still scrolls */
+let drag=null,ignoreClick=0;
+function dzInfo(el){return el.dataset.slot!=null?{slot:+el.dataset.slot}:{pid:el.dataset.pid};}
+document.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('[data-dz]');if(!el)return;
+  drag={el,x:e.clientX,y:e.clientY,started:false,touch:e.pointerType!=='mouse',ghost:null,over:null};
+  if(drag.touch)drag.timer=setTimeout(()=>{if(drag&&!drag.started)startDrag(drag.x,drag.y);},300);
+});
+function startDrag(x,y){
+  drag.started=true;const r=drag.el.getBoundingClientRect();
+  const g=drag.el.cloneNode(true);g.classList.add('ghost');g.style.width=r.width+'px';document.body.appendChild(g);drag.ghost=g;
+  drag.el.classList.add('dragging');moveGhost(x,y);if(navigator.vibrate)try{navigator.vibrate(15);}catch(e){}
+}
+function moveGhost(x,y){
+  drag.ghost.style.left=(x-drag.ghost.offsetWidth/2)+'px';drag.ghost.style.top=(y-30)+'px';
+  const t=document.elementFromPoint(x,y);const dz=t&&t.closest('[data-dz]');
+  if(drag.over&&drag.over!==dz)drag.over.classList.remove('over');
+  if(dz&&dz!==drag.el){dz.classList.add('over');drag.over=dz;}else drag.over=null;
+}
+document.addEventListener('pointermove',e=>{
+  if(!drag)return;const d=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);
+  if(!drag.started){
+    if(drag.touch){if(d>8){clearTimeout(drag.timer);drag=null;}else{drag.x=e.clientX;drag.y=e.clientY;}return;}
+    if(d>6)startDrag(e.clientX,e.clientY);else return;
+  }
+  moveGhost(e.clientX,e.clientY);
+});
+function endDrag(e,cancel){
+  if(!drag)return;clearTimeout(drag.timer);
+  if(drag.started){
+    const src=dzInfo(drag.el),over=drag.over;
+    drag.ghost.remove();drag.el.classList.remove('dragging');if(over)over.classList.remove('over');
+    ignoreClick=Date.now();
+    if(!cancel&&over){ui.sel=null;drag=null;makeMove(src,dzInfo(over));render();return;}
+  }
+  drag=null;
+}
+document.addEventListener('pointerup',e=>endDrag(e,false));
+document.addEventListener('pointercancel',e=>endDrag(e,true));
+document.addEventListener('touchmove',e=>{if(drag&&drag.started)e.preventDefault();},{passive:false});
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('[data-dz]'))e.preventDefault();});
+/* ---------- actions ---------- */
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1800);}
+async function copyText(text,title,note){
+  try{await navigator.clipboard.writeText(text);toast('Copied — paste it into WhatsApp');}
+  catch(e){ui.sheet={mode:'copy',title,note:note||'Select all and copy.',text};render();setTimeout(()=>{const ta=$('#sheetText');if(ta){ta.focus();ta.select();}},50);}
+}
+function findP(id){return state.panel.players.find(p=>p.id===id);}
+function act(a,el){
+  const M=state.match,id=el.dataset.id,v=el.dataset.v;
+  switch(a){
+    case 'tab':ui.sel=null;ui.tab=v;ui.editing=null;ui.timing=null;ui.confirmReset=false;render();window.scrollTo(0,0);return;
+    case 'addLine':{const i=+v;ui.addLines=ui.addLines.includes(i)?ui.addLines.filter(x=>x!==i):[...ui.addLines,i];break;}
+    case 'addSide':ui.addSide=v;break;
+    case 'addPlayer':{
+      const n=(ui.addName||'').trim();if(!n){toast('Type a name first');const i=$('#addName');if(i)i.focus();return;}
+      state.panel.players.push({id:uid(),name:n.slice(0,60),lines:ui.addLines.slice(),side:ui.addSide});
+      ui.addName='';ui.addLines=[];ui.addSide='E';persist('panel');render();toast('Added '+n);const i=$('#addName');if(i)i.focus();return;}
+    case 'bulkToggle':ui.bulkOpen=!ui.bulkOpen;return;
+    case 'bulkAdd':{const ps=parseBulk(ui.bulk||'');if(!ps.length){toast('Nothing to add');return;}
+      state.panel.players.push(...ps);ui.bulk='';ui.bulkOpen=false;persist('panel');toast(`Added ${ps.length} players`);break;}
+    case 'sample':{const ps=parseBulk(SAMPLE);state.panel.players.push(...ps);persist('panel');toast('Sample squad loaded');break;}
+    case 'copyPanel':copyText(panelText(),'Panel list','Paste this into Paste a whole list on another phone, or keep it as a backup.');return;
+    case 'edit':ui.editing=ui.editing===id?null:id;ui.confirmDel=null;break;
+    case 'pLine':{const p=findP(id);if(!p)return;const i=+v;p.lines=p.lines.includes(i)?p.lines.filter(x=>x!==i):[...p.lines,i];persist('panel');break;}
+    case 'pSide':{const p=findP(id);if(!p)return;p.side=v;persist('panel');break;}
+    case 'del':ui.confirmDel=id;break;
+    case 'delNo':ui.confirmDel=null;break;
+    case 'delYes':state.panel.players=state.panel.players.filter(p=>p.id!==id);['present','anchor','benchStart','late','injured'].forEach(k=>delete M[k][id]);ui.editing=null;ui.confirmDel=null;persist('panel');persist('match');break;
+    case 'size':{const n=+v;M.form=DEFAULT_FORM[n].slice();M.size=n;persist('match');break;}
+    case 'form':{const i=+el.dataset.i;M.form[i]=Math.max(0,Math.min(6,M.form[i]+(+v)));M.size=sumForm(M.form);persist('match');break;}
+    case 'half':{const q=isQuarters(M);M.half=Math.max(5,Math.min(60,M.half+5*(+v)));const T=M.half*2;M.windows=(q||M.equal)?quarters(T):autoWindows(T,M.subs);persist('match');break;}
+    case 'winQ':M.windows=quarters(M.half*2);persist('match');break;
+    case 'mode':M.equal=v==='eq';if(M.equal&&M.windows.length<3)M.windows=quarters(M.half*2);persist('match');break;
+    case 'subs':{const old=M.subs;M.subs=Math.max(0,Math.min(40,M.subs+(+v)));
+      const autoBefore=JSON.stringify(autoWindows(M.half*2,old))===JSON.stringify(M.windows.slice().sort((a,b)=>a-b));
+      if(autoBefore||!M.windows.length)M.windows=autoWindows(M.half*2,M.subs);persist('match');break;}
+    case 'winDel':M.windows=M.windows.filter(t=>t!==+v);persist('match');break;
+    case 'winAuto':M.windows=autoWindows(M.half*2,M.subs);persist('match');break;
+    case 'rolling':M.rolling=!M.rolling;persist('match');break;
+    case 'equal':M.equal=!M.equal;if(M.equal&&M.windows.length<3)M.windows=autoWindows(M.half*2,Math.max(M.subs,6));persist('match');break;
+    case 'formSet':{const f=v.split('-').map(Number);M.form=f;M.size=sumForm(f);persist('match');break;}
+    case 'availToggle':ui.availOpen=!ui.availOpen;return;
+    case 'availApply':{const rv=parseRSVP(ui.avail||'');if(rv&&rv.people.length){ui.availMsg=applyRSVP(rv,true);break;}
+      const r=matchNames(ui.avail||'');if(!r.found.length){ui.availMsg='No names matched the panel.';break;}
+      M.present={};r.found.forEach(p=>M.present[p.id]=true);Object.keys(M.anchor).forEach(id=>{if(!M.present[id])delete M.anchor[id];});Object.keys(M.benchStart).forEach(id=>{if(!M.present[id])delete M.benchStart[id];});
+      ui.availMsg=`Ticked ${r.found.length}.`+(r.missing.length?` Not on the panel: <b>${r.missing.map(esc).join(', ')}</b> — add them on the Panel tab, then paste again.`:'');
+      persist('match');break;}
+    case 'present':if(M.present[id]){delete M.present[id];delete M.anchor[id];delete M.benchStart[id];}else M.present[id]=true;persist('match');break;
+    case 'allIn':state.panel.players.forEach(p=>M.present[p.id]=true);persist('match');break;
+    case 'allOut':M.present={};M.anchor={};M.benchStart={};persist('match');break;
+    case 'anchor':if(M.anchor[id])delete M.anchor[id];else{M.anchor[id]=true;delete M.benchStart[id];}persist('match');break;
+    case 'bench':if(M.benchStart[id])delete M.benchStart[id];else{M.benchStart[id]=true;delete M.anchor[id];}persist('match');break;
+    case 'timing':ui.timing=ui.timing===id?null:id;break;
+    case 'reset':ui.confirmReset=true;break;
+    case 'resetNo':ui.confirmReset=false;break;
+    case 'resetYes':Object.assign(M,{present:{},anchor:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
+    case 'shuffle':M.seed=(M.seed%9973)+1;M.done={};M.moves=[];ui.sel=null;persist('match');toast('New combination');break;
+    case 'view':ui.view=+v;ui.sel=null;break;
+    case 'pick':{const tgt=el.dataset.slot!=null?{slot:+el.dataset.slot}:{pid:el.dataset.pid};
+      if(!ui.sel){ui.sel=tgt;break;}
+      const same=(ui.sel.slot!=null&&ui.sel.slot===tgt.slot)||(ui.sel.pid&&ui.sel.pid===tgt.pid);
+      const src=ui.sel;ui.sel=null;if(same)break;
+      makeMove(src,tgt);break;}
+    case 'undoMove':M.moves=M.moves.filter(m=>m.id!==v);persist('match');toast('Change undone');break;
+    case 'clearBad':{const P=simulate();M.moves=M.moves.filter(m=>!P.moveBad[m.id]);persist('match');break;}
+    case 'done':if(M.done[v])delete M.done[v];else M.done[v]=true;persist('match');break;
+    case 'whatsapp':copyText(whatsappText(),'Plan for WhatsApp','Copy this and paste it into the mentors group. A screenshot of this page works too.');return;
+    case 'sheetCopy':{const ta=$('#sheetText');if(ta){ta.focus();ta.select();}try{navigator.clipboard.writeText(ui.sheet.text).then(()=>toast('Copied'),()=>toast('Text selected — use Copy'));}catch(e){toast('Text selected — use Copy');}return;}
+    case 'sheetClose':ui.sheet=null;ui.pending=null;break;
+    case 'send':sendToPhone();return;
+    case 'pasteOpen':ui.pasteCode='';ui.sheet={mode:'paste',title:'Load from another phone',note:'Paste the link (or code) another mentor sent you.'};break;
+    case 'pasteLoad':offerImport(ui.pasteCode||'');return;
+    case 'importYes':if(ui.pending){state.panel=ui.pending.panel;state.match=ui.pending.match;ui.pending=null;ui.sheet=null;ui.sel=null;ui.view=0;persist('panel');persist('match');ui.tab='plan';toast('Plan loaded');}break;
+    case 'sheetBg':if(curEvent&&el===curEvent.target){ui.sheet=null;break;}return;
+    default:return;
+  }
+  render();
+}
+let curEvent=null;
+document.addEventListener('click',e=>{
+  if(Date.now()-ignoreClick<400)return;
+  const el=e.target.closest('[data-a]');if(!el||!$('#app').contains(el))return;
+  if(el.tagName==='SUMMARY'){act(el.dataset.a,el);return;}
+  curEvent=e;if(el.dataset.a!=='sheetBg')e.preventDefault();act(el.dataset.a,el);curEvent=null;
+});
+document.addEventListener('input',e=>{
+  const el=e.target;const f=el.dataset&&el.dataset.f;if(!f)return;
+  if(f==='addName')ui.addName=el.value;
+  else if(f==='bulk')ui.bulk=el.value;
+  else if(f==='avail')ui.avail=el.value;
+  else if(f==='pasteCode')ui.pasteCode=el.value;
+  else if(f==='opp'){state.match.opp=el.value.slice(0,60);persist('match');}
+  else if(f==='pname'){const p=findP(el.dataset.id);if(p){p.name=el.value.slice(0,60);persist('panel');}}
+});
+document.addEventListener('change',e=>{
+  const el=e.target;const f=el.dataset&&el.dataset.f;if(!f)return;const M=state.match,id=el.dataset.id;
+  if(f==='date'){M.date=el.value;persist('match');render();}
+  else if(f==='rsvpPanel'||f==='rsvpMatch'){readFile(el,txt=>{const r=parseRSVP(txt);
+    if(!r||!r.people.length){toast("That doesn't look like a ClubZap RSVP report");return;}
+    if(f==='rsvpPanel')ui.panelMsg=applyRSVP(r,false);else ui.rsvpMsg=applyRSVP(r,true);render();});}
+  else if(f==='winNew'){const t=Math.round(+el.value*2)/2;if(t>0&&t<M.half*2&&!M.windows.includes(t)){M.windows.push(t);persist('match');}render();}
+  else if(f==='late'){const t=Math.round(+el.value);if(el.value===''||!(t>0))delete M.late[id];else M.late[id]=t;persist('match');render();}
+  else if(f==='inj'){if(el.value==='')delete M.injured[id];else M.injured[id]=Math.max(0,Math.round(+el.value));persist('match');render();}
+  else if(f==='pname'||f==='opp'){render();}
+  else if(f==='formText'){const n=(el.value.match(/\d+/g)||[]).map(Number);
+    if(n.length!==6||n[0]>1||n.some(x=>x>6)||sumForm(n)<3){toast('Use 6 numbers: GK-FB-HB-MID-HF-FF, e.g. 1-2-3-2-3-2');return;}
+    M.form=n;M.size=sumForm(n);persist('match');render();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;const el=e.target;const f=el.dataset&&el.dataset.f;
+  if(f==='addName'){e.preventDefault();act('addPlayer',el);}
+  else if(f==='winNew'||f==='late'||f==='inj'||f==='formText'){e.preventDefault();el.blur();}
+});
+
+render();
+loadFromHash();
+window.addEventListener('hashchange',loadFromHash);
+initDb();
+</script>
+</body>
+</html>
