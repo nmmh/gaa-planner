@@ -116,6 +116,7 @@ textarea{min-height:120px;resize:vertical}
 .bchip.late{opacity:.6;cursor:default}
 .mvrow .txt{font-size:13.5px;color:var(--muted)}
 .undo{border:0;background:#eef2ea;border-radius:8px;padding:5px 9px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.ver{text-align:center;font-size:12px;color:var(--muted);padding:14px 0 4px}.ver a{color:var(--muted)}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -165,6 +166,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
+const APP_VERSION='v1.1',REPO_URL='https://github.com/nmmh/gaa-planner';
 const LS_KEY='hurling-sub-planner-v1';
 
 /* ---------- helpers ---------- */
@@ -492,7 +494,7 @@ document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pend
 function render(){
   if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
   const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
-  $('#app').innerHTML=`<header><h1>GAA <span>Sub Planner</span></h1>${syncPill()}</header><main>${v}</main>${navView()}${sheetView()}`;
+  $('#app').innerHTML=`<header><h1>GAA <span>Sub Planner</span></h1>${syncPill()}</header><main>${v}</main><footer class="ver"><a href="${REPO_URL}/commit/${APP_VERSION}" target="_blank" rel="noopener">${APP_VERSION}</a> · <a href="${REPO_URL}/commits/main" target="_blank" rel="noopener">changes</a></footer>${navView()}${sheetView()}`;
 }
 function navView(){
   const pc=state.panel.players.length;
@@ -660,7 +662,7 @@ function planView(){
       if(vi===0){
         chg=P.hist[s.id].filter(x=>x.from>0&&x.to>x.from).map(x=>`<div class="chg ${x.kind==='inj'?'inj':x.kind==='move'?'mv':''}">${x.kind==='move'?'↔ ':''}${fm(x.from)}' ${esc(shortName(x.p.name))}</div>`).join('');
       }else if(seg&&seg.from===pr.a&&pr.a>0){
-        chg=`<div class="chg ${seg.kind==='move'?'mv':seg.kind==='inj'?'inj':''}">${seg.kind==='move'?'↔ moved here':seg.kind==='manual'?'▲ on (your change)':'▲ comes on'}</div>`;
+        chg=`<div class="chg ${seg.kind==='move'?'mv':seg.kind==='inj'?'inj':''}">${seg.kind==='move'?'↔ moved here':seg.kind==='manual'?'▲ on (your adjustment)':'▲ comes on'}</div>`;
       }
       return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" data-a="pick" data-slot="${s.id}" data-dz="1"><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.anchor[p.id]?' <span class="anc">⚓</span>':''}</div>${chg}</div>`;
     }).join('')+`</div>`;
@@ -670,26 +672,41 @@ function planView(){
   // who sits out each period
   h+=`<div class="card"><h2>Off each ${isQuarters(M)?'quarter':'period'}</h2><ul class="tl">`+P.periods.map((pr,i)=>`<li><div class="t" style="font-size:20px">${periodName(i,pr.a,pr.b,M)}</div><div class="grow" style="padding-top:2px">${pr.off.length?pr.off.map(p=>`<span class="tag" style="font-size:14px;padding:4px 8px;margin:0 4px 4px 0;display:inline-block">${esc(shortName(p.name))}</span>`).join(''):'<span class="muted small">Nobody — all on</span>'}${pr.notYet.length?`<div class="small muted">Not here yet: ${pr.notYet.map(p=>esc(shortName(p.name))).join(', ')}</div>`:''}</div></li>`).join('')+`</ul></div>`;
   // timeline
-  h+=`<div class="card"><h2>Substitutions / changes</h2>`;
-  const badMoves=M.moves.filter(m=>P.moveBad[m.id]);
-  if(badMoves.length)h+=`<div class="warnbox" style="margin-top:0">${badMoves.length} of your changes no longer fit the plan (someone's attendance or the change times changed). <button class="btn alt sm" data-a="clearBad">Remove them</button></div>`;
-  if(!P.timeline.length)h+=`<span class="muted small">No subs scheduled.</span>`;
+  // the plan as it will happen on the day (adjustments already folded in)
+  const subsTl=P.timeline.filter(e=>e.t>0);
+  h+=`<div class="card"><h2>Substitutions</h2>`;
+  if(!subsTl.length)h+=`<span class="muted small">No subs scheduled.</span>`;
   else{
-    h+='<ul class="tl">'+P.timeline.map(e=>{
-      const items=e.items.map((it,ix)=>{
+    h+='<ul class="tl">'+subsTl.map(e=>{
+      const items=e.items.map(it=>{
         if(it.kind==='arrive')return `<div class="sw"><span class="txt muted">${esc(it.p.name)} arrives — on the bench</span></div>`;
         if(it.kind==='injbench')return `<div class="sw"><span class="txt muted">${esc(it.p.name)} unavailable (injured)</span></div>`;
-        if(it.kind==='fill')return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into empty #${it.slot.num} ${it.slot.label}</span></div>`;
-        if(it.kind==='move')return `<div class="sw mvrow"><span class="txt">↔ ${esc(shortName(it.a.name))} to ${it.aTo.label}${it.b?`, ${esc(shortName(it.b.name))} to ${it.bTo.label}`:''}</span><button class="undo" data-a="undoMove" data-v="${it.mid}" aria-label="Undo">Undo</button></div>`;
+        if(it.kind==='fill'||(it.kind==='msub'&&!it.off))return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into empty #${it.slot.num} ${it.slot.label}</span></div>`;
+        if(it.kind==='move')return `<div class="sw mvrow"><span class="txt">↔ ${esc(shortName(it.a.name))} moves to ${it.aTo.label}${it.b?`, ${esc(shortName(it.b.name))} to ${it.bTo.label}`:''}</span></div>`;
         if(it.kind==='short')return `<div class="sw"><span class="txt"><span class="off-n">${esc(it.off.name)}</span> off injured — <b>nobody to bring on</b> (${it.slot.label})</span></div>`;
-        if(it.kind==='msub'&&!it.off)return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into #${it.slot.num} ${it.slot.label} <span class="tag">your change</span></span><button class="undo" data-a="undoMove" data-v="${it.mid}">Undo</button></div>`;
         const key=e.t+'-'+it.on.id+'-'+it.off.id;const d=!!M.done[key];
-        return `<div class="sw ${d?'done':''}"><button class="tick ${d?'on':''}" data-a="done" data-v="${key}" aria-label="Done">${d?'✓':''}</button><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}${it.kind==='inj'?' · injury'+(it.over?' · over limit':''):''}${it.kind==='msub'?' · <span class="tag">your change</span>':''}</span></span>${it.kind==='msub'?`<button class="undo" data-a="undoMove" data-v="${it.mid}">Undo</button>`:''}</div>`;
+        return `<div class="sw ${d?'done':''}"><button class="tick ${d?'on':''}" data-a="done" data-v="${key}" aria-label="Done">${d?'✓':''}</button><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}${it.kind==='inj'?' · injury'+(it.over?' · over limit':''):''}</span></span></div>`;
       }).join('')||`<div class="sw"><span class="txt muted small">${e.noneLeft?'No subs left':'No change needed'}</span></div>`;
-      return `<li><div class="t">${e.t===0?'Start':minLabel(e.t,M)}${e.t===M.half?'<small>'+fm(e.t)+"'</small>":''}${isQuarters(M)&&e.t!==M.half?'<small>'+(e.t<M.half?'Q2':'Q4')+'</small>':''}</div><div class="grow">${items}</div></li>`;
+      return `<li><div class="t">${minLabel(e.t,M)}${e.t===M.half?'<small>'+fm(e.t)+"'</small>":''}${isQuarters(M)&&e.t!==M.half?'<small>'+(e.t<M.half?'Q2':'Q4')+'</small>':''}</div><div class="grow">${items}</div></li>`;
     }).join('')+'</ul>';
   }
   h+=`</div>`;
+  // your adjustments to the generated plan, each one undoable
+  if(M.moves.length){
+    const items={};P.timeline.forEach(e=>e.items.forEach(it=>{if(it.mid)items[it.mid]={it,t:e.t};}));
+    const nm=id=>{const p=state.panel.players.find(x=>x.id===id);return p?esc(shortName(p.name)):'?';};
+    const when=t=>{if(t===0)return 'Start';const i=P.bounds.indexOf(t);return i>0?periodName(i,t,P.bounds[i+1],M):minLabel(t,M);};
+    h+=`<div class="card"><h2>Your adjustments <span class="muted small">${M.moves.length}</span><span class="sp"></span><button class="btn alt sm" data-a="undoAll">Undo all</button></h2>
+      <p class="small muted" style="margin-top:0">Changes you made to the plan the page suggested. The pitch, subs and minutes above already include them.</p><ul class="tl">`+
+      M.moves.slice().sort((a,b)=>a.t-b.t).map(m=>{
+        const x=items[m.id];let txt;
+        if(P.moveBad[m.id]||!x)txt=`<span class="muted">${nm(m.a)}${m.b?' ⇄ '+nm(m.b):''} — no longer fits (attendance or change times changed)</span>`;
+        else if(x.it.kind==='move')txt=`↔ ${esc(shortName(x.it.a.name))} to ${x.it.aTo.label}${x.it.b?`, ${esc(shortName(x.it.b.name))} to ${x.it.bTo.label}`:''}`;
+        else txt=m.t===0?`<b>${esc(shortName(x.it.on.name))}</b> starts${x.it.off?` instead of ${esc(shortName(x.it.off.name))}`:''} at ${x.it.slot.label}`
+                       :`<b>${esc(shortName(x.it.on.name))}</b> on${x.it.off?` for ${esc(shortName(x.it.off.name))}`:''} at ${x.it.slot.label}`;
+        return `<li><div class="t" style="font-size:18px">${when(m.t)}</div><div class="sw grow"><span class="txt" style="font-size:14px">${txt}</span><button class="undo" data-a="undoMove" data-v="${m.id}">Undo</button></div></li>`;
+      }).join('')+`</ul></div>`;
+  }
   // minutes
   const rows=P.present.filter(p=>P.st[p.id]!==undefined).slice().sort((a,b)=>P.mins[b.id]-P.mins[a.id]||a.name.localeCompare(b.name));
   h+=`<div class="card"><h2>Minutes</h2>`+rows.map(p=>`<div class="mbar"><span class="n">${M.anchor[p.id]?'⚓ ':''}${esc(p.name)}</span><span class="bar"><i class="${M.anchor[p.id]?'anc':''}" style="width:${Math.round(100*P.mins[p.id]/P.T)}%"></i></span><span class="m">${fm(P.mins[p.id])}'</span></div>`).join('')+`</div>`;
@@ -813,9 +830,9 @@ function whatsappText(){
   L.push('');L.push('*BENCH*: '+([...bench0.map(p=>p.name),...late.map(p=>p.name+' (late '+P.lateAt(p.id)+"')")].join(', ')||'none'));
   L.push('');L.push('*OFF EACH '+(isQuarters(M)?'QUARTER':'PERIOD')+'*');
   P.periods.forEach((pr,i)=>L.push(`${periodName(i,pr.a,pr.b,M)}: ${pr.off.map(p=>shortName(p.name)).join(', ')||'nobody'}${pr.notYet.length?' (not here yet: '+pr.notYet.map(p=>shortName(p.name)).join(', ')+')':''}`));
-  L.push('');L.push('*SUBS / CHANGES*');
+  L.push('');L.push('*SUBS*');
   if(!P.timeline.length)L.push('none');
-  P.timeline.forEach(e=>{
+  P.timeline.filter(e=>e.t>0).forEach(e=>{
     const its=e.items.filter(i=>['sub','inj','fill','msub','move'].includes(i.kind));
     if(!its.length)return;
     L.push(`${e.t===0?'Start':minLabel(e.t,M)}${e.t===M.half?' ('+fm(e.t)+"')":''}`);
@@ -1003,6 +1020,7 @@ function act(a,el){
       const src=ui.sel;ui.sel=null;if(same)break;
       makeMove(src,tgt);break;}
     case 'undoMove':M.moves=M.moves.filter(m=>m.id!==v);persist('match');toast('Change undone');break;
+    case 'undoAll':M.moves=[];ui.sel=null;persist('match');toast('Back to the suggested plan');break;
     case 'clearBad':{const P=simulate();M.moves=M.moves.filter(m=>!P.moveBad[m.id]);persist('match');break;}
     case 'done':if(M.done[v])delete M.done[v];else M.done[v]=true;persist('match');break;
     case 'whatsapp':copyText(whatsappText(),'Plan for WhatsApp','Copy this and paste it into the mentors group. A screenshot of this page works too.');return;
