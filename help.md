@@ -1,5 +1,13 @@
 # GAA Match Planner – Help
 
+**Remember: no plan survives first contact**
+Use this tool to trial, visualize and share plans with fellow coaches. 
+
+It is no substitute for reacting to the game that actually plays out. 
+++Trust it alone and it might let you down!**
+
+Use it to trial offensive and defensive selections and increase your confidence around what you are trying to achieve in a game. 
+
 A planner for underage hurling and gaelic football mentors. You build your panel once, tick who's here on match day, get a fair starting selection with one tap, and then adjust it by hand.
 
 Everything is saved on your own phone. Nothing is uploaded unless you send a link or a picture.
