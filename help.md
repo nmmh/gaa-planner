@@ -4,7 +4,7 @@
 Use this tool to trial, visualize and share plans with fellow coaches. 
 
 It is no substitute for reacting to the game that actually plays out. 
-++Trust it alone and it might let you down!**
+**Trust it alone and it might let you down!**
 
 Use it to trial offensive and defensive selections and increase your confidence around what you are trying to achieve in a game. 
 
