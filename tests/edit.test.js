@@ -43,3 +43,21 @@ test('undo and redo through the buttons',()=>{
   app.click('[data-a=redo]');assert.notDeepEqual(lineups(app),after);
   assert.deepEqual(app.errors,[]);
 });
+
+test('a position swap sticks when one of the two players is subbed later',()=>{
+  const app=loadApp();setupMatch(app,{n:17});app.run('wand()');
+  const L=lineups(app);
+  // a Q1 pair where the first goes off in Q2 and the second stays on
+  let pair=null;
+  for(let i=1;i<L[0].length&&!pair;i++)for(let k=1;k<L[0].length&&!pair;k++){
+    if(i===k)continue;const a=L[0][i],b=L[0][k];
+    if(a&&b&&!L[1].includes(a)&&L[1][k]===b)pair=[i,k];
+  }
+  assert.ok(pair,'need a pair to test');
+  const moves=()=>app.json(`derive().timeline.reduce((n,e)=>n+e.items.filter(i=>i.kind==='move').length,0)`);
+  const m0=moves(),b=L[0][pair[1]];
+  app.run(`ui.view=0;editPlan({slot:${pair[0]}},{slot:${pair[1]}})`);
+  const L2=lineups(app);
+  assert.equal(L2[1][pair[0]],b,'the player who stays on should keep the swapped position');
+  assert.equal(moves(),m0,'a swap must not add position changes later in the match');
+});

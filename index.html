@@ -182,7 +182,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
-const APP_VERSION='v0.7',REPO_URL='https://github.com/nmmh/gaa-planner';
+const APP_VERSION='v0.7.1',REPO_URL='https://github.com/nmmh/gaa-planner';
 let commitInfo=null;
 function verHtml(){
   const help=`<a href="${REPO_URL}/blob/main/help.md" target="_blank" rel="noopener"><b>Help</b></a>`;
@@ -351,7 +351,7 @@ function simulate(){
   const startEntry={t:0,items:[],window:false};
   applyMoves(0,startEntry);
   const starters=field.slice();
-  // ⚓ locked players keep the position they start in (or first come on in)
+  // 🔒 locked players keep the position they start in (or first come on in)
   field.forEach((p,si)=>{if(p&&M.lock[p.id])home[p.id]=si;});
   const relocate=(b,si,t,entry)=>{
     if(!M.lock[b.id])return;
@@ -640,8 +640,10 @@ function editPlan(src,dst){
   if(!a&&!b)return false;
   if(a&&b){if(a===b)return false;
     if(lu.includes(a)&&lu.includes(b)){
-      // both on the pitch: a position swap only — who is on or off in any quarter never changes
-      for(let j=vi;j<L.length;j++){const ia=L[j].indexOf(a),ib=L[j].indexOf(b);if(ia>=0&&ib>=0){L[j][ia]=b;L[j][ib]=a;}}
+      // both on the pitch: the two positions trade places from here on, so who is on or off
+      // never changes, and a later sub comes on in the spot of the player they replace
+      const si=lu.indexOf(a),sj=lu.indexOf(b);
+      for(let j=vi;j<L.length;j++){const t=L[j][si];L[j][si]=L[j][sj];L[j][sj]=t;}
     }else{
       // bench player in for a pitch player: they swap the rest of their match
       for(let j=vi;j<L.length;j++)L[j]=L[j].map(x=>x===a?b:x===b?a:x);
@@ -1081,8 +1083,8 @@ async function decodeState(code){
 }
 async function sendToPhone(){
   const code=await encodeState();const link=shareBase()+'#s='+code;
-  const M=state.match;const msg=`📋 ${M.opp?'vs '+M.opp+' – ':''}tap to load the full plan (panel, who's here, subs):\n${link}`;
-  ui.sheet={mode:'copy',title:'Send to another phone',noteHtml:'Send this link to the other mentors. Opening it loads <b>everything</b> — panel, attendance, ©/⚓ marks, formation and your adjustments — on their phone. Send a new link whenever you change something.',text:msg,wa:'https://wa.me/?text='+encodeURIComponent(msg)};
+  const M=state.match;const msg=`📋 ${M.opp?'vs '+M.opp+' – ':''}my plan${M.selName?' ('+M.selName+')':''}. Tap to preview it — it won't change yours:\n${link}`;
+  ui.sheet={mode:'copy',title:'Send to another phone',noteHtml:'Send this link to the other mentors. It opens as a <b>preview</b> of your plan on their phone — nothing of theirs changes unless they tap <b>Save a copy</b>. Send a new link after you change something.',text:msg,wa:'https://wa.me/?text='+encodeURIComponent(msg)};
   render();
 }
 async function offerImport(code){
@@ -1122,8 +1124,7 @@ function saveSelection(name,opt){
   const entry={id:opt.id||uid(),name:String(name).slice(0,60),auto:!!opt.auto,savedAt:Date.now(),match:JSON.parse(JSON.stringify(state.match))};
   const i=opt.id?list.findIndex(x=>x.id===opt.id):-1;if(i>=0)list.splice(i,1);
   list.unshift(entry);
-  let autos=0;storeSaves(list.filter(x=>!x.auto||++autos<=5));
-  return entry;
+  let autos=0;return storeSaves(list.filter(x=>!x.auto||++autos<=5))?entry:null;
 }
 function autoSave(reason){if(!state.match.plan)return;const nm=state.match.selName?state.match.selName+' ('+reason+')':'Unsaved plan ('+reason+')';saveSelection(nm,{auto:true});}
 function savedWhen(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
@@ -1378,8 +1379,8 @@ function act(a,el){
     case 'view':ui.view=+v;ui.sel=null;break;
     case 'plans':ui.saveName='';ui.delSave=null;ui.sheet={mode:'plans',title:'Plans for this match',note:''};break;
     case 'saveNew':{const nm=(ui.saveName||'').trim()||('Plan '+(loadSaves().filter(x=>!x.auto).length+1));
-      M.selName=nm;const e=saveSelection(nm);M.selId=e.id;saveSelection(nm,{id:e.id});persist('match');ui.saveName='';toast('Saved “'+nm+'”');break;}
-    case 'saveSame':saveSelection(M.selName,{id:M.selId});toast('Saved');break;
+      const e=saveSelection(nm);if(!e)break;M.selName=nm;M.selId=e.id;if(!saveSelection(nm,{id:e.id}))break;persist('match');ui.saveName='';toast('Saved “'+nm+'”');break;}
+    case 'saveSame':if(saveSelection(M.selName,{id:M.selId}))toast('Saved');break;
     case 'openSave':openSaved(v);break;
     case 'delSave':ui.delSave=v;break;
     case 'delSaveNo':ui.delSave=null;break;
@@ -1388,7 +1389,7 @@ function act(a,el){
     case 'pvSave':{const src=ui.preview.state;autoSave('before saving a copy');
       const r=adoptPlan(src);state.match=r.match;
       const nm=(src.match.selName||'Plan')+' – from link'+(src.match.opp?' (vs '+src.match.opp+')':'');
-      state.match.selName=nm;const e=saveSelection(nm);state.match.selId=e.id;saveSelection(nm,{id:e.id});
+      state.match.selName=nm;const e=saveSelection(nm);if(e){state.match.selId=e.id;saveSelection(nm,{id:e.id});}
       ui.preview=null;ui.tab='plan';ui.view=0;persist('panel');persist('match');
       toast('Saved “'+nm+'”'+(r.added.length?` · ${r.added.length} new player${r.added.length>1?'s':''} added to your panel`:''));break;}
     case 'wand':{const had=!!M.plan;wand();ui.sel=null;toast(had?'New selection — ↶ to go back':'Team suggested — tweak it by hand');break;}

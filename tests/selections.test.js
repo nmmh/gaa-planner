@@ -65,3 +65,11 @@ test('saved plans: save, auto-save before the wand, open again, undo the open, d
   assert.ok(!app.json('loadSaves()').some(x=>x.id===idA));
   assert.deepEqual(app.errors,[]);
 });
+
+test('no "Saved" message when the phone refuses to store it',()=>{
+  const app=loadApp();setupMatch(app,{n:16});app.run(`wand();ui.tab='plan';render()`);
+  app.run(`Object.defineProperty(window,'localStorage',{value:{getItem:()=>null,setItem:()=>{throw new Error('full')}},configurable:true})`);
+  app.click('[data-a=plans]');app.run(`ui.saveName='Plan A'`);app.click('[data-a=saveNew]');
+  assert.doesNotMatch(app.d.querySelector('#toast').textContent,/Saved/);
+  assert.ok(!app.run('state.match.selName'),'should not look saved');
+});
