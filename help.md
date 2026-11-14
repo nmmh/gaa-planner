@@ -54,17 +54,19 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
   - It works around late arrivals and injuries.
   - Press it again for a different selection. ↶ takes you back.
   - Nothing moves automatically until you press the wand.
-- **Swapping players:** tap a player, then another, or press and hold one and drag it.
-  - Two players on the pitch swap positions.
-  - A bench player swaps in for a pitch player.
-  - A swap applies from the quarter you're looking at to the end of the match.
+- **Swapping players:** tap a player, then another, or press and hold one and drag it. A swap applies from the quarter you're looking at to the end of the match.
+  - Two players on the pitch swap **positions only**. Who sits out each quarter doesn't change.
+  - A bench player swapped with a pitch player takes over the rest of that player's match, and vice versa.
 - **↶ / ↷** (top right of the pitch) undo and redo your last actions. They're greyed out when there's nothing to undo or redo. The history lasts until you close the page.
 - **Warnings** (yellow) point out empty positions, players who aren't here any more, late arrivals placed too early, injuries, and anyone who doesn't get on.
 - **Off each quarter**, **Substitutions** and **Minutes** all follow the plan on the pitch. Tick each sub as it happens.
 
 ## 4. Sharing
 
-- **📷 Image** (Plan tab) makes a picture of this quarter or all four quarters, with the opposition and date. Share it straight to WhatsApp. It's view-only, so it never changes anyone else's plan.
+- **📷 Image** (Plan tab) makes a picture to share straight to WhatsApp. It's view-only, so it never changes anyone else's plan. Choose:
+  - **Whole plan** (the default): the starting team, the subs, and every change listed under the minute it happens. One picture explains the whole plan, which is best for mentors before the game.
+  - **This quarter**: the team as it stands at that point. Handy at half-time or for showing players their shape.
+  - **All quarters**: the team in every quarter, side by side.
 - The **share button** (top right of the page) also has:
   - **Send to another phone:** a link that loads your whole setup (panel, attendance and plan) on another phone. Opening it replaces what's on that phone, after asking.
   - **Plan as WhatsApp text**

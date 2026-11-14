@@ -181,7 +181,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
-const APP_VERSION='v0.5',REPO_URL='https://github.com/nmmh/gaa-planner';
+const APP_VERSION='v0.6',REPO_URL='https://github.com/nmmh/gaa-planner';
 let commitInfo=null;
 function verHtml(){
   const help=`<a href="${REPO_URL}/blob/main/help.md" target="_blank" rel="noopener"><b>Help</b></a>`;
@@ -306,6 +306,7 @@ function pickStarters(avail,slots,M){
   return assign;
 }
 
+function changeLabel(t,M){return isQuarters(M)?'Q'+(curBounds(M).indexOf(t)+1):minLabel(t,M);}
 function periodList(M){const T=M.half*2;const w=[...new Set(M.windows.filter(t=>t>0&&t<T))].sort((a,b)=>a-b);const b=[0,...w,T];return b.slice(0,-1).map((a,i)=>periodName(i,a,b[i+1],M));}
 const sitsOut=(M,id,i)=>!!(M.sitOut[id]&&M.sitOut[id][i]);
 const hasPlan=(M,id)=>!!(M.sitOut[id]&&Object.keys(M.sitOut[id]).length);
@@ -598,8 +599,36 @@ function derive(){
 function wand(){
   const M=state.match;if(M.plan)M.seed=(M.seed%9973)+1;
   M.moves=[];const P=simulate();
-  M.plan={form:M.form.join('-'),bounds:P.bounds,lineups:P.periods.map(pr=>pr.at.map(x=>x?x.p.id:null))};
+  const L=P.periods.map(pr=>pr.at.map(x=>x?x.p.id:null));
+  if(M.equal)balancePlan(L,P.bounds,P.slots,M,P.present);
+  M.plan={form:M.form.join('-'),bounds:P.bounds,lineups:L};
   M.done={};persist('match');
+}
+// evens out minutes after the period-by-period pass: keeps swapping a player who has
+// too much time for one who has too little, in a period where that helps, until nothing does
+function balancePlan(L,bounds,slots,M,present){
+  const len=bounds.slice(1).map((b,i)=>b-bounds[i]),byId={};present.forEach(p=>byId[p.id]=p);
+  const avail=(id,i)=>{const l=+M.late[id]||0,inj=M.injured[id];return l<=bounds[i]&&(inj===undefined||inj===''||+inj>bounds[i]);};
+  const home=id=>{for(const lu of L){const k=lu.indexOf(id);if(k>=0)return k;}return -1;};
+  for(let iter=0;iter<400;iter++){
+    const m={};present.forEach(p=>m[p.id]=0);L.forEach((lu,i)=>lu.forEach(id=>{if(id&&m[id]!==undefined)m[id]+=len[i];}));
+    let best=null;
+    L.forEach((lu,i)=>{
+      const off=present.filter(p=>!lu.includes(p.id)&&avail(p.id,i)&&!(i===0&&M.benchStart[p.id]));
+      lu.forEach((x,si)=>{
+        if(!x||!byId[x]||slots[si].line===0)return;
+        off.forEach(y=>{
+          if(M.lock[y.id]){const h=home(y.id);if(h>=0&&h!==si)return;}
+          const gain=m[x]-m[y.id]-len[i];if(gain<=0.01)return;
+          const v=gain+0.5*fit(y,slots[si]);
+          if(fit(y,slots[si])<-4)return;
+          if(!best||v>best.v)best={v,i,si,y:y.id};
+        });
+      });
+    });
+    if(!best)break;
+    L[best.i][best.si]=best.y;
+  }
 }
 // hand edits: tap/drag in quarter vi, applies from that quarter on
 function editPlan(src,dst){
@@ -608,40 +637,69 @@ function editPlan(src,dst){
   if(src.pid&&dst.pid){toast('Pick a position on the pitch');return false;}
   const a=src.slot!=null?lu[src.slot]:src.pid,b=dst.slot!=null?lu[dst.slot]:dst.pid;
   if(!a&&!b)return false;
-  if(a&&b){if(a===b)return false;for(let j=vi;j<L.length;j++)L[j]=L[j].map(x=>x===a?b:x===b?a:x);}
+  if(a&&b){if(a===b)return false;
+    if(lu.includes(a)&&lu.includes(b)){
+      // both on the pitch: a position swap only — who is on or off in any quarter never changes
+      for(let j=vi;j<L.length;j++){const ia=L[j].indexOf(a),ib=L[j].indexOf(b);if(ia>=0&&ib>=0){L[j][ia]=b;L[j][ib]=a;}}
+    }else{
+      // bench player in for a pitch player: they swap the rest of their match
+      for(let j=vi;j<L.length;j++)L[j]=L[j].map(x=>x===a?b:x===b?a:x);
+    }}
   else{const pid=a||b,emptySi=a?dst.slot:src.slot;if(emptySi==null)return false;
-    for(let j=vi;j<L.length;j++){if(L[j][emptySi])break;const k=L[j].indexOf(pid);if(k>=0)L[j][k]=null;L[j][emptySi]=pid;}}
-  M.plan=plan;M.done={};persist('match');return true;
+    const fromSi=lu.indexOf(pid);
+    for(let j=vi;j<L.length;j++){if(L[j][emptySi])break;const k=L[j].indexOf(pid);
+      if(j>vi&&fromSi>=0&&k!==fromSi)break; // only follow while they're still in the same spot
+      if(j>vi&&fromSi<0&&k>=0)break;
+      if(k>=0)L[j][k]=null;L[j][emptySi]=pid;}}
+  M.plan=plan;persist('match');return true;
 }
 /* ---------- pitch picture ---------- */
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function fitText(ctx,t,w){if(ctx.measureText(t).width<=w)return t;while(t.length>1&&ctx.measureText(t+'…').width>w)t=t.slice(0,-1);return t+'…';}
 function wrapText(ctx,t,w){const words=t.split(' ');const out=[];let line='';words.forEach(x=>{const tryL=line?line+' '+x:x;if(ctx.measureText(tryL).width>w&&line){out.push(line);line=x;}else line=tryL;});if(line)out.push(line);return out;}
+// the changes at each change time, in the words used on the Plan tab
+function changeList(P,M){
+  const qs=isQuarters(M);
+  return P.timeline.map(e=>{
+    const i=P.bounds.indexOf(e.t);
+    const items=e.items.map(it=>{
+      if(it.kind==='sub')return {ic:'▲',col:'#1f8a4c',t:`${it.on.name} on for ${it.off.name}`,d:`#${it.slot.num} ${it.slot.label}`};
+      if(it.kind==='fill')return {ic:'▲',col:'#1f8a4c',t:`${it.on.name} on`,d:`#${it.slot.num} ${it.slot.label}`};
+      if(it.kind==='offonly')return {ic:'▼',col:'#c2412d',t:`${it.off.name} off, not replaced`,d:`#${it.slot.num} ${it.slot.label} empty`};
+      if(it.kind==='move')return {ic:'↔',col:'#5d6b61',t:`${it.a.name} moves to ${it.aTo.label}`,d:''};
+      return null;}).filter(Boolean);
+    P.present.forEach(p=>{const l=P.lateAt(p.id);if(l>(P.bounds[i-1]||0)&&l<=e.t)items.unshift({ic:'⏱',col:'#2f5fa8',t:`${p.name} arrives (${l}')`,d:''});});
+    return {t:e.t,head:`${fm(e.t)}'`+(e.t===M.half?' · half-time':'')+(qs&&e.t!==M.half?` · start of Q${i+1}`:''),items};
+  }).filter(x=>x.items.length);
+}
 async function buildImage(which){
   try{await document.fonts.ready;}catch(e){}
   const M=state.match,P=derive(),PW=720,pad=20;
-  const idx=which==='all'?P.periods.map((_,i)=>i):[Math.min(ui.view||0,P.periods.length-1)];
-  const cols=idx.length>1?2:1;
   const lines=LINES.map((l,li)=>P.slots.filter(s=>s.line===li)).filter(a=>a.length);
   const tmp=document.createElement('canvas').getContext('2d');tmp.font='600 21px Barlow, sans-serif';
-  const benchTxt=i=>{const pr=P.periods[i];const n=[...pr.off.map(p=>shortName(p.name)),...pr.notYet.map(p=>shortName(p.name)+' (late)')];return 'Bench: '+(n.join(', ')||'nobody');};
+  const vi=Math.min(ui.view||0,P.periods.length-1);
+  const idx=which==='all'?P.periods.map((_,i)=>i):which==='one'?[vi]:[0];
+  const cols=idx.length>1?2:1;
+  const benchTxt=i=>{const pr=P.periods[i];const n=[...pr.off.map(p=>shortName(p.name)),...pr.notYet.map(p=>shortName(p.name)+' (arrives '+P.lateAt(p.id)+"')")];return (which==='plan'?'Subs: ':'Bench: ')+(n.join(', ')||'nobody');};
   const benchLines=Math.max(...idx.map(i=>wrapText(tmp,benchTxt(i),PW-2*pad-24).length));
   const rowH=102,panelH=58+lines.length*rowH+18+benchLines*28+22;
-  const headH=118,W=cols*PW+(cols+1)*pad,rows=Math.ceil(idx.length/cols),H=headH+rows*(panelH+pad)+34;
+  // changes block (whole plan only)
+  const changes=which==='plan'?changeList(P,M):[];
+  let chH=0;if(which==='plan'){chH=64;changes.forEach(c=>{chH+=40+c.items.length*30;});if(!changes.length)chH+=34;chH+=12;}
+  const headH=118,W=cols*PW+(cols+1)*pad,rows=Math.ceil(idx.length/cols),H=headH+rows*(panelH+pad)+(chH?chH+pad:0)+34;
   const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
   ctx.fillStyle='#f3f5ef';ctx.fillRect(0,0,W,H);
-  // heading: opposition and date
-  ctx.fillStyle='#14251a';ctx.font='700 46px "Barlow Condensed", sans-serif';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#14251a';ctx.font='700 46px "Barlow Condensed", sans-serif';ctx.textBaseline='alphabetic';ctx.textAlign='left';
   ctx.fillText(fitText(ctx,M.opp?'vs '+M.opp:'Match plan',W-2*pad),pad,62);
   const dateTxt=M.date?new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}):'';
   ctx.fillStyle='#5d6b61';ctx.font='500 24px Barlow, sans-serif';
-  ctx.fillText([dateTxt,P.slots.length+'-a-side','2×'+M.half+' mins'].filter(Boolean).join(' · '),pad,98);
+  ctx.fillText([dateTxt,P.slots.length+'-a-side','2×'+M.half+' mins',P.present.length+' players'].filter(Boolean).join(' · '),pad,98);
   idx.forEach((pi,k)=>{
     const x=pad+(k%cols)*(PW+pad),y=headH+Math.floor(k/cols)*(panelH+pad),pr=P.periods[pi];
     const g=ctx.createLinearGradient(0,y,0,y+panelH);g.addColorStop(0,'#22743f');g.addColorStop(1,'#1e6a3a');
     rr(ctx,x,y,PW,panelH,18);ctx.fillStyle=g;ctx.fill();
     ctx.fillStyle='#fff';ctx.font='700 30px "Barlow Condensed", sans-serif';
-    ctx.fillText(periodName(pi,pr.a,pr.b,M)+(isQuarters(M)?`  ·  ${fm(pr.a)}'–${fm(pr.b)}'`:''),x+pad,y+40);
+    ctx.fillText(which==='plan'?'Starting team':(periodName(pi,pr.a,pr.b,M)+(isQuarters(M)?`  ·  ${fm(pr.a)}'–${fm(pr.b)}'`:'')),x+pad,y+40);
     lines.forEach((ss,r)=>{
       const n=ss.length,bw=Math.min(210,(PW-2*pad-(n-1)*12)/n),tot=n*bw+(n-1)*12,y0=y+58+r*rowH;let x0=x+(PW-tot)/2;
       ss.forEach(s=>{
@@ -651,7 +709,7 @@ async function buildImage(which){
         ctx.fillStyle='#4a3500';ctx.font='800 16px Barlow, sans-serif';ctx.textAlign='center';ctx.fillText(String(s.num),x0+8,y0+16);
         ctx.fillStyle=p?'#14251a':'#c2412d';ctx.font='700 23px Barlow, sans-serif';
         ctx.fillText(fitText(ctx,p?shortName(p.name):'— empty —',bw-16),x0+bw/2,y0+46);
-        const on=seg&&seg.from===pr.a&&pr.a>0;
+        const on=which!=='plan'&&seg&&seg.from===pr.a&&pr.a>0;
         ctx.fillStyle=on?'#1f8a4c':'#5d6b61';ctx.font=(on?'700 ':'600 ')+'16px Barlow, sans-serif';
         ctx.fillText(fitText(ctx,s.label+(p&&M.lock[p.id]?' · locked':'')+(on?(seg.kind==='move'?' · moved':' · on'):''),bw-12),x0+bw/2,y0+74);
         ctx.textAlign='left';x0+=bw+12;
@@ -662,6 +720,21 @@ async function buildImage(which){
     ctx.fillStyle='#fff';ctx.font='600 21px Barlow, sans-serif';
     wrapText(ctx,benchTxt(pi),PW-2*pad-24).forEach((ln,j)=>ctx.fillText(ln,x+pad,by+30+j*28));
   });
+  if(which==='plan'){
+    let y=headH+panelH+pad;const x=pad;
+    rr(ctx,x,y,PW,chH,18);ctx.fillStyle='#fff';ctx.fill();
+    ctx.fillStyle='#14251a';ctx.font='700 30px "Barlow Condensed", sans-serif';ctx.fillText('Changes',x+pad,y+40);y+=64;
+    if(!changes.length){ctx.fillStyle='#5d6b61';ctx.font='500 21px Barlow, sans-serif';ctx.fillText('No changes planned',x+pad,y+8);}
+    changes.forEach(c=>{
+      ctx.fillStyle='#1e6a3a';ctx.font='700 24px Barlow, sans-serif';ctx.fillText(c.head,x+pad,y+10);y+=40;
+      c.items.forEach(it=>{
+        ctx.fillStyle=it.col;ctx.font='800 20px Barlow, sans-serif';ctx.fillText(it.ic,x+pad+4,y);
+        ctx.fillStyle='#14251a';ctx.font='600 21px Barlow, sans-serif';
+        const main=fitText(ctx,it.t,PW-2*pad-200);ctx.fillText(main,x+pad+34,y);
+        if(it.d){const w=ctx.measureText(main).width;ctx.fillStyle='#5d6b61';ctx.font='500 18px Barlow, sans-serif';ctx.fillText(fitText(ctx,it.d,PW-2*pad-34-w-14),x+pad+34+w+12,y);}
+        y+=30;});
+    });
+  }
   ctx.fillStyle='#8a968c';ctx.font='500 16px Barlow, sans-serif';ctx.fillText('GAA Match Planner',pad,H-12);
   return c;
 }
@@ -670,10 +743,11 @@ async function openImage(which){
   if(!P.plan){toast('Press 🪄 first to make a plan');return;}
   const c=await buildImage(which);const url=c.toDataURL('image/png');
   const vi=Math.min(ui.view||0,P.periods.length-1),q=isQuarters(M);
-  const name=('plan-'+(M.opp||'match')+'-'+(which==='all'?'all':periodName(vi,P.periods[vi].a,P.periods[vi].b,M))).replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.png';
+  const tag=which==='all'?'all':which==='one'?periodName(vi,P.periods[vi].a,P.periods[vi].b,M):'plan';
+  const name=('plan-'+(M.opp||'match')+'-'+tag).replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.png';
   ui.imgFile=null;ui.imgWhich=which;
   try{const blob=await new Promise(r=>c.toBlob(r,'image/png'));if(blob&&typeof File!=='undefined')ui.imgFile=new File([blob],name,{type:'image/png'});}catch(e){}
-  ui.sheet={mode:'image',title:'Pitch picture',note:'',which,url,qName:q?'quarter ('+periodName(vi,0,0,M)+')':'period',allName:q?'quarters':'periods'};
+  ui.sheet={mode:'image',title:'Share a picture',note:'',which,url,qName:q?periodName(vi,0,0,M):'this period',allName:q?'All quarters':'All periods'};
   render();
 }
 /* ---------- undo / redo (this session, this phone) ---------- */
@@ -912,7 +986,7 @@ function planView(){
       const seg=pr.at[s.id];const p=seg?seg.p:null;
       const bad=p&&fit(p,s)<0;
       let chg='';
-      if(vi===0)chg=P.hist[s.id].filter(x=>x.from>0).map(x=>`<div class="chg ${x.kind==='move'?'mv':''}">${x.kind==='move'?'↔ ':''}${periodName(P.bounds.indexOf(x.from),x.from,0,M)} ${esc(shortName(x.p.name))}</div>`).join('');
+      if(vi===0)chg=P.hist[s.id].filter(x=>x.from>0).map(x=>`<div class="chg ${x.kind==='move'?'mv':''}">${x.kind==='move'?'↔ ':''}${changeLabel(x.from,M)} ${esc(shortName(x.p.name))}</div>`).join('');
       else if(seg&&seg.from===pr.a&&pr.a>0)chg=`<div class="chg ${seg.kind==='move'?'mv':''}">${seg.kind==='move'?'↔ moved here':'▲ comes on'}</div>`;
       return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" data-a="pick" data-slot="${s.id}" data-dz="1"><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.lock[p.id]?' <span class="anc">🔒</span>':''}</div>${chg}</div>`;
     }).join('')+`</div>`;
@@ -947,7 +1021,8 @@ function sheetView(){
   let body='';
   if(S.mode==='image'){
     const canShare=!!(ui.imgFile&&navigator.canShare&&navigator.canShare({files:[ui.imgFile]}));
-    body=`<div class="seg" style="margin-bottom:10px"><button class="${S.which==='one'?'on':''}" data-a="imgWhich" data-v="one">This ${S.qName}</button><button class="${S.which==='all'?'on':''}" data-a="imgWhich" data-v="all">All ${S.allName}</button></div>
+    body=`<div class="seg" style="margin-bottom:6px"><button class="${S.which==='plan'?'on':''}" data-a="imgWhich" data-v="plan">Whole plan</button><button class="${S.which==='one'?'on':''}" data-a="imgWhich" data-v="one">${S.qName}</button><button class="${S.which==='all'?'on':''}" data-a="imgWhich" data-v="all">${S.allName}</button></div>
+      <p class="small muted" style="margin:0 0 10px">${S.which==='plan'?'Starting team and every change by minute — best before the game.':S.which==='one'?'The team as it stands in this period — handy at half-time.':'The team in every period, side by side.'}</p>
       <img src="${S.url}" alt="Pitch plan" style="width:100%;border-radius:10px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.15)">
       <div class="row" style="margin-top:10px">${canShare?`<button class="btn grow" data-a="imgShare">Share to WhatsApp…</button>`:`<span class="small muted grow">Press and hold the picture to save or share it.</span>`}<button class="btn alt" data-a="sheetClose">Close</button></div>`;
   }else if(S.mode==='menu'){
@@ -1248,7 +1323,7 @@ function act(a,el){
     case 'undo':undoRedo(true);return;
     case 'redo':undoRedo(false);return;
     case 'bench':if(M.benchStart[id])delete M.benchStart[id];else M.benchStart[id]=true;persist('match');break;
-    case 'image':openImage(ui.imgWhich||'one');return;
+    case 'image':openImage(ui.imgWhich||'plan');return;
     case 'imgWhich':openImage(v);return;
     case 'imgShare':if(ui.imgFile){navigator.share({files:[ui.imgFile],title:ui.imgFile.name}).catch(()=>{});}return;
     case 'pick':{const tgt=el.dataset.slot!=null?{slot:+el.dataset.slot}:{pid:el.dataset.pid};
@@ -1268,7 +1343,7 @@ function act(a,el){
     case 'addOpen':ui.addOpen=!ui.addOpen;if(!ui.addOpen)ui.panelMsg='';break;
     case 'pasteOpen':ui.pasteCode='';ui.sheet={mode:'paste',title:'Load from another phone',note:'Paste the link (or code) another mentor sent you.'};break;
     case 'pasteLoad':offerImport(ui.pasteCode||'');return;
-    case 'importYes':if(ui.pending){state.panel=ui.pending.panel;state.match=ui.pending.match;ui.pending=null;ui.sheet=null;ui.sel=null;ui.view=0;persist('panel');persist('match');ui.tab='plan';toast('Plan loaded');}break;
+    case 'importYes':if(ui.pending){undoStack=[];redoStack=[];state.panel=ui.pending.panel;state.match=ui.pending.match;ui.pending=null;ui.sheet=null;ui.sel=null;ui.view=0;persist('panel');persist('match');ui.tab='plan';toast('Plan loaded');}break;
     case 'sheetBg':if(curEvent&&el===curEvent.target){ui.sheet=null;break;}return;
     default:return;
   }

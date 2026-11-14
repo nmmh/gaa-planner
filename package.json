@@ -1,0 +1,7 @@
+{
+  "name": "gaa-planner",
+  "private": true,
+  "description": "Tests for the GAA Match Planner (the app itself is index.html, no build step).",
+  "scripts": { "test": "node --test tests/*.test.js" },
+  "devDependencies": { "jsdom": "^25.0.0" }
+}

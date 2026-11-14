@@ -14,6 +14,7 @@ To update the app, replace `index.html` and push to `main`.
 
 Still in development (0.x). The bottom of the page shows the version and the commit it was published from, linked to that commit here. See [help.md](help.md) for how to use it.
 
+- **v0.6** — Picture: **Whole plan** (starting team, subs, every change under its minute) is the default; this quarter / all quarters still available. Swapping two pitch players now changes positions only, never who sits out later. Sub ticks survive edits. Pitch labels use minutes when change times aren't quarters. Wand evens minutes better when change times are uneven. Undo history clears when you load a link. Automated tests in `tests/` (`npm install && npm test`).
 - **v0.5** — Renamed **GAA Match Planner**. Nothing is placed automatically until you press the 🪄 wand (top left of the pitch); then tweak by hand with ↶ undo / ↷ redo (top right). Your adjustments section removed (undo/redo replaces it). Pitch as a picture (one quarter or all four) to share to WhatsApp. 🔒 replaces ⚓ for "stays in position"; **B** (sub, starts on the bench) is back; core (©) and per-quarter Off picks removed. Subs default to no limit. Team size and formation live on the Plan tab; sub settings on Here today. Help link in the footer.
 - **v0.4** — Pick which quarter(s) each player sits out (commit 709271c, shown in-app as v1.3).
 - **v0.3** — © core players; ⚓ position lock; list-first Panel tab; share menu (commit 5496de0, in-app v1.2).
