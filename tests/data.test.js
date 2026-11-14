@@ -25,15 +25,6 @@ test('ClubZap RSVP report: names tidied, responses read, opposition and date fil
   assert.equal(app.json('Object.keys(state.match.present).length'),2);
 });
 
-test('a link loads exactly the same setup on another phone',async()=>{
-  const a=loadApp();setupMatch(a,{n:16});a.run(`state.match.opp='Test Rovers';wand()`);
-  const code=await a.run('encodeState()');
-  const b=loadApp({url:'https://nmmh.github.io/gaa-planner/#s='+code});
-  await new Promise(r=>setTimeout(r,200));
-  b.click('[data-a=importYes]');
-  assert.deepEqual(b.json('state'),a.json('state'));
-});
-
 test('links from older versions still open (no stored plan, © and Off picks migrated)',async()=>{
   const a=loadApp();const ids=setupMatch(a,{n:16});
   // shape of a v0.4 setup: core, per-quarter sit-outs and pitch adjustments, no stored line-ups

@@ -132,6 +132,7 @@ textarea{min-height:120px;resize:vertical}
 .pbtn span{font-size:14px;font-weight:700}
 .pbtn.wand{background:var(--accent);color:var(--accent-ink)}
 .pbtn:disabled{opacity:.35;box-shadow:none}
+.pvbar{background:#fff6e0;border:1px solid #f3dfa8;border-radius:12px;padding:12px;margin:8px 0}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -181,7 +182,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
-const APP_VERSION='v0.6',REPO_URL='https://github.com/nmmh/gaa-planner';
+const APP_VERSION='v0.7',REPO_URL='https://github.com/nmmh/gaa-planner';
 let commitInfo=null;
 function verHtml(){
   const help=`<a href="${REPO_URL}/blob/main/help.md" target="_blank" rel="noopener"><b>Help</b></a>`;
@@ -245,7 +246,7 @@ function normMatch(m){
   o.half=Math.max(5,Math.min(60,+o.half||30));
   o.subs=Math.max(0,Math.min(40,+o.subs||0));
   o.windows=Array.isArray(o.windows)?[...new Set(o.windows.map(n=>Math.round(+n*2)/2))].filter(n=>n>0&&n<o.half*2):[];
-  o.rolling=o.rolling!==false;o.moves=Array.isArray(o.moves)?o.moves.filter(m=>m&&m.id&&m.a&&typeof m.t==='number'):[];o.equal=!!o.equal;
+  o.rolling=o.rolling!==false;o.selName=typeof o.selName==='string'?o.selName.slice(0,60):'';o.selId=typeof o.selId==='string'?o.selId:'';o.moves=Array.isArray(o.moves)?o.moves.filter(m=>m&&m.id&&m.a&&typeof m.t==='number'):[];o.equal=!!o.equal;
   o.seed=+o.seed||1;
   return o;
 }
@@ -597,7 +598,7 @@ function derive(){
 }
 // the wand: a fresh automatic selection for the whole match
 function wand(){
-  const M=state.match;if(M.plan)M.seed=(M.seed%9973)+1;
+  const M=state.match;if(M.plan){autoSave('before 🪄');M.seed=(M.seed%9973)+1;}
   M.moves=[];const P=simulate();
   const L=P.periods.map(pr=>pr.at.map(x=>x?x.p.id:null));
   if(M.equal)balancePlan(L,P.bounds,P.slots,M,P.present);
@@ -672,9 +673,9 @@ function changeList(P,M){
     return {t:e.t,head:`${fm(e.t)}'`+(e.t===M.half?' · half-time':'')+(qs&&e.t!==M.half?` · start of Q${i+1}`:''),items};
   }).filter(x=>x.items.length);
 }
-async function buildImage(which){
+async function buildImage(which,st){
+  st=st||state;const M=st.match,P=withState(st,derive),PW=720,pad=20;
   try{await document.fonts.ready;}catch(e){}
-  const M=state.match,P=derive(),PW=720,pad=20;
   const lines=LINES.map((l,li)=>P.slots.filter(s=>s.line===li)).filter(a=>a.length);
   const tmp=document.createElement('canvas').getContext('2d');tmp.font='600 21px Barlow, sans-serif';
   const vi=Math.min(ui.view||0,P.periods.length-1);
@@ -739,9 +740,9 @@ async function buildImage(which){
   return c;
 }
 async function openImage(which){
-  const M=state.match,P=derive();
+  const st=ui.preview?ui.preview.state:state,M=st.match,P=withState(st,derive);
   if(!P.plan){toast('Press 🪄 first to make a plan');return;}
-  const c=await buildImage(which);const url=c.toDataURL('image/png');
+  const c=await buildImage(which,st);const url=c.toDataURL('image/png');
   const vi=Math.min(ui.view||0,P.periods.length-1),q=isQuarters(M);
   const tag=which==='all'?'all':which==='one'?periodName(vi,P.periods[vi].a,P.periods[vi].b,M):'plan';
   const name=('plan-'+(M.opp||'match')+'-'+tag).replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.png';
@@ -821,6 +822,7 @@ document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pend
 
 function render(){
   if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
+  if(ui.preview){$('#app').innerHTML=`<header><h1>GAA <span>Match Planner</span></h1></header><main>${previewView()}</main><footer class="ver">${verHtml()}</footer>${sheetView()}`;return;}
   const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
   $('#app').innerHTML=`<header><h1>GAA <span>Match Planner</span></h1>${syncPill()}<button class="sharebtn" data-a="shareMenu" aria-label="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
 }
@@ -956,15 +958,15 @@ function matchView(){
   return h;
 }
 
-function planView(){
+function planView(ro){
   const M=state.match,P=derive();
   if(!state.panel.players.length||!P.present.length){
     return `<div class="card"><div class="empty-state"><div class="big">Nothing to plan yet</div>${!state.panel.players.length?'Add your panel first.':'Tick who is here on the <b>Here today</b> tab.'}<br><br><button class="btn" data-a="tab" data-v="${state.panel.players.length?'match':'panel'}">Go</button></div></div>`;
   }
   const dateTxt=M.date?new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):'';
-  let h=`<div class="row" style="margin:6px 0 2px"><div class="grow"><div style="font-family:'Barlow Condensed';font-size:22px;line-height:1.1">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div></div>
-    <button class="btn sm" data-a="image" title="Share the pitch as a picture">📷 Image</button></div>`;
-  h+=`<div class="card" style="padding:10px 14px"><div class="lbl">Team size</div>
+  let h=`<div class="row" style="margin:6px 0 2px"><div class="grow"><div style="font-family:'Barlow Condensed';font-size:22px;line-height:1.1">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div>${M.selName?`<div class="small" style="margin-top:2px">📁 <b>${esc(M.selName)}</b></div>`:''}</div>
+    ${ro?'':'<button class="btn alt sm" data-a="plans" title="Saved selections">📁 Plans</button>'}<button class="btn sm" data-a="image" title="Share the pitch as a picture">📷 Image</button></div>`;
+  if(!ro)h+=`<div class="card" style="padding:10px 14px"><div class="lbl">Team size</div>
     <div class="seg">${[7,9,11,13,15].map(n=>`<button class="${M.size===n?'on':''}" data-a="size" data-v="${n}">${n}</button>`).join('')}</div>${formationControl()}</div>`;
   const subsN=P.timeline.reduce((a,e)=>a+e.items.filter(i=>i.kind==='sub'||i.kind==='fill').length,0);
   h+=`<div class="summary" style="margin-top:8px">
@@ -977,8 +979,8 @@ function planView(){
   const vi=Math.min(ui.view||0,P.periods.length-1);const pr=P.periods[vi];
   const selKey=ui.sel?(ui.sel.slot!=null?'s'+ui.sel.slot:'p'+ui.sel.pid):'';
   h+=`<div class="row" style="margin-top:12px"><div class="seg grow">${P.periods.map((x,i)=>`<button class="${i===vi?'on':''}" data-a="view" data-v="${i}">${periodName(i,x.a,x.b,M)}</button>`).join('')}</div></div>`;
-  h+=`<div class="hint">${ui.sel?'Now tap another position or a bench player to swap · tap again to cancel':(P.plan?'Tap a player, then another, to swap — or press and hold to drag. Changes apply from '+(vi===0?'the start':periodName(vi,pr.a,pr.b,M))+' on.':'Press 🪄 for a starting selection, then tweak it by hand.')}</div>`;
-  h+=`<div class="pitch"><div class="pitchbar"><button class="pbtn wand" data-a="wand" title="${P.plan?'New automatic selection':'Fill the team automatically'}">🪄${P.plan?'':' <span>Suggest team</span>'}</button><span class="sp"></span>
+  if(!ro)h+=`<div class="hint">${ui.sel?'Now tap another position or a bench player to swap · tap again to cancel':(P.plan?'Tap a player, then another, to swap — or press and hold to drag. Changes apply from '+(vi===0?'the start':periodName(vi,pr.a,pr.b,M))+' on.':'Press 🪄 for a starting selection, then tweak it by hand.')}</div>`;
+  h+=ro?`<div class="pitch">`:`<div class="pitch"><div class="pitchbar"><button class="pbtn wand" data-a="wand" title="${P.plan?'New automatic selection':'Fill the team automatically'}">🪄${P.plan?'':' <span>Suggest team</span>'}</button><span class="sp"></span>
     <button class="pbtn" id="undoBtn" data-a="undo" title="Undo" ${undoStack.length?'':'disabled'}>↶</button><button class="pbtn" id="redoBtn" data-a="redo" title="Redo" ${redoStack.length?'':'disabled'}>↷</button></div>`;
   LINES.forEach((l,li)=>{
     const ss=P.slots.filter(s=>s.line===li);if(!ss.length)return;
@@ -988,10 +990,10 @@ function planView(){
       let chg='';
       if(vi===0)chg=P.hist[s.id].filter(x=>x.from>0).map(x=>`<div class="chg ${x.kind==='move'?'mv':''}">${x.kind==='move'?'↔ ':''}${changeLabel(x.from,M)} ${esc(shortName(x.p.name))}</div>`).join('');
       else if(seg&&seg.from===pr.a&&pr.a>0)chg=`<div class="chg ${seg.kind==='move'?'mv':''}">${seg.kind==='move'?'↔ moved here':'▲ comes on'}</div>`;
-      return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" data-a="pick" data-slot="${s.id}" data-dz="1"><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.lock[p.id]?' <span class="anc">🔒</span>':''}</div>${chg}</div>`;
+      return `<div class="slot ${bad?'fit-bad':''} ${selKey==='s'+s.id?'sel':''}" ${ro?'':`data-a="pick" data-slot="${s.id}" data-dz="1"`}><span class="num">${s.num}</span><b class="${p?'':'empty'}">${p?esc(shortName(p.name)):'— empty —'}</b><div class="pos">${s.label}${p&&M.lock[p.id]?' <span class="anc">🔒</span>':''}</div>${chg}</div>`;
     }).join('')+`</div>`;
   });
-  h+=`<div class="benchStrip"><div class="lineTag" style="margin-top:4px">Bench · ${periodName(vi,pr.a,pr.b,M)}</div><div class="lineRow" style="flex-wrap:wrap">${pr.off.map(p=>`<div class="bchip ${selKey==='p'+p.id?'sel':''}" data-a="pick" data-pid="${p.id}" data-dz="1">${esc(shortName(p.name))}</div>`).join('')||'<span style="color:rgba(255,255,255,.7);font-size:13px">Nobody</span>'}${pr.notYet.map(p=>`<div class="bchip late">${esc(shortName(p.name))} · late</div>`).join('')}</div></div>`;
+  h+=`<div class="benchStrip"><div class="lineTag" style="margin-top:4px">Bench · ${periodName(vi,pr.a,pr.b,M)}</div><div class="lineRow" style="flex-wrap:wrap">${pr.off.map(p=>`<div class="bchip ${selKey==='p'+p.id?'sel':''}" ${ro?'':`data-a="pick" data-pid="${p.id}" data-dz="1"`}>${esc(shortName(p.name))}</div>`).join('')||'<span style="color:rgba(255,255,255,.7);font-size:13px">Nobody</span>'}${pr.notYet.map(p=>`<div class="bchip late">${esc(shortName(p.name))} · late</div>`).join('')}</div></div>`;
   h+=`</div><div class="legend"><span><b style="color:var(--on)">Q2 Name</b> = comes on</span><span><b style="color:var(--muted)">↔</b> = position change</span><span>🔒 stays in position</span><span>Red outline = out of usual position</span></div>`;
   if(!P.plan)return h;
   // who is off each quarter
@@ -1005,7 +1007,7 @@ function planView(){
       if(it.kind==='fill')return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into #${it.slot.num} ${it.slot.label}</span></div>`;
       if(it.kind==='offonly')return `<div class="sw"><span class="txt"><span class="off-n">${esc(it.off.name)}</span> comes off — #${it.slot.num} ${it.slot.label} left empty</span></div>`;
       const key=e.t+'-'+it.on.id+'-'+it.off.id;const d=!!M.done[key];
-      return `<div class="sw ${d?'done':''}"><button class="tick ${d?'on':''}" data-a="done" data-v="${key}" aria-label="Done">${d?'✓':''}</button><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}</span></span></div>`;
+      return `<div class="sw ${d?'done':''}"><button class="tick ${d?'on':''}" ${ro?'disabled':`data-a="done" data-v="${key}"`} aria-label="Done">${d?'✓':''}</button><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}</span></span></div>`;
     }).join('')||`<div class="sw"><span class="txt muted small">No change</span></div>`;
     return `<li><div class="t">${minLabel(e.t,M)}${e.t===M.half?'<small>'+fm(e.t)+"'</small>":''}${isQuarters(M)&&e.t!==M.half?'<small>'+(e.t<M.half?'Q2':'Q4')+'</small>':''}</div><div class="grow">${items}</div></li>`;
   }).join('')+'</ul>';
@@ -1019,7 +1021,21 @@ function planView(){
 function sheetView(){
   const S=ui.sheet;if(!S)return '';
   let body='';
-  if(S.mode==='image'){
+  if(S.mode==='plans'){
+    const M=state.match,list=loadSaves();
+    body=`<div class="card" style="margin:0 0 10px;background:#f6f8f3">
+      <div class="small muted">Working on</div><div style="font-weight:700;margin-bottom:8px">${M.selName?esc(M.selName):'An unsaved plan'}</div>
+      ${M.selId&&list.some(x=>x.id===M.selId)?`<button class="btn wide" data-a="saveSame" style="margin-bottom:8px">Save changes to “${esc(M.selName)}”</button>`:''}
+      <div class="row"><input type="text" data-f="saveName" placeholder="Name, e.g. Plan A – strong start" value="${esc(ui.saveName||'')}" class="grow" style="flex:1"><button class="btn alt" data-a="saveNew">Save as new</button></div></div>
+      ${list.length?'':'<p class="small muted">Nothing saved yet. Saved plans stay on this phone.</p>'}
+      <ul class="plist">${list.map(e=>{const m=e.match||{};const here=Object.keys(m.present||{}).length;
+        return `<li><div class="prow"><span class="grow" style="min-width:0"><span class="nm" style="display:block">${esc(e.name)}${e.id===M.selId?' <span class="tag">open</span>':''}${e.auto?' <span class="tag" style="background:#eceee9;color:#7a857c">auto</span>':''}</span>
+          <span class="small muted">${m.opp?'vs '+esc(m.opp)+' · ':''}${here} here · ${savedWhen(e.savedAt)}${m.plan?'':' · no plan yet'}</span></span>
+          ${ui.delSave===e.id?`<button class="btn warn sm" data-a="delSaveYes" data-v="${e.id}">Delete</button><button class="btn alt sm" data-a="delSaveNo">Keep</button>`
+            :`<button class="btn sm" data-a="openSave" data-v="${e.id}">Open</button><button class="iconbtn" data-a="delSave" data-v="${e.id}" aria-label="Delete">🗑</button>`}</div></li>`;}).join('')}</ul>
+      <p class="small muted">Saved on this phone only. Before 🪄, opening a plan or starting a new match, your current plan is auto-saved (last 5 kept). ↶ also undoes opening a plan.</p>
+      <button class="btn alt wide" data-a="sheetClose">Close</button>`;
+  }else if(S.mode==='image'){
     const canShare=!!(ui.imgFile&&navigator.canShare&&navigator.canShare({files:[ui.imgFile]}));
     body=`<div class="seg" style="margin-bottom:6px"><button class="${S.which==='plan'?'on':''}" data-a="imgWhich" data-v="plan">Whole plan</button><button class="${S.which==='one'?'on':''}" data-a="imgWhich" data-v="one">${S.qName}</button><button class="${S.which==='all'?'on':''}" data-a="imgWhich" data-v="all">${S.allName}</button></div>
       <p class="small muted" style="margin:0 0 10px">${S.which==='plan'?'Starting team and every change by minute — best before the game.':S.which==='one'?'The team as it stands in this period — handy at half-time.':'The team in every period, side by side.'}</p>
@@ -1027,7 +1043,7 @@ function sheetView(){
       <div class="row" style="margin-top:10px">${canShare?`<button class="btn grow" data-a="imgShare">Share to WhatsApp…</button>`:`<span class="small muted grow">Press and hold the picture to save or share it.</span>`}<button class="btn alt" data-a="sheetClose">Close</button></div>`;
   }else if(S.mode==='menu'){
     const it=(a,ic,t,d)=>`<button class="menuitem" data-a="${a}"><span class="mi-ic">${ic}</span><span><b>${t}</b><br><span class="small muted">${d}</span></span></button>`;
-    body=it('send','📲','Send to another phone','A link that loads everything — panel, who\'s here, formation, subs')
+    body=it('send','📲','Send to another phone','A link to your plan. It opens as a preview — they can save a copy without losing theirs')
       +it('image','📷','Pitch as a picture','This quarter or all four, with the opposition and date')
       +it('whatsapp','💬','Plan as WhatsApp text','Starting team, who\'s off each quarter, subs and minutes')
       +it('copyPanel','📋','Panel list','Names and positions — paste into Add player(s) on another phone')
@@ -1070,11 +1086,52 @@ async function sendToPhone(){
   render();
 }
 async function offerImport(code){
-  try{const d=await decodeState(code);ui.pending=d;
-    const here=d.panel.players.filter(p=>d.match.present[p.id]).length;
-    ui.sheet={mode:'confirm',title:'Load plan from another phone?',noteHtml:`${d.match.opp?'<b>vs '+esc(d.match.opp)+'</b> · ':''}${d.panel.players.length} players on the panel, ${here} ticked as here. This <b>replaces</b> the panel and match on this phone.`};
-  }catch(e){ui.sheet=null;toast("That link or code didn't work — ask for a fresh one");}
+  try{const d=await decodeState(code);ui.preview={state:d};ui.sheet=null;ui.sel=null;ui.view=0;window.scrollTo(0,0);}
+  catch(e){ui.sheet=null;toast("That link or code didn't work — ask for a fresh one");}
   render();
+}
+function withState(st,fn){const s0=state;state=st;try{return fn();}finally{state=s0;}}
+function previewView(){
+  const st=ui.preview.state,M=st.match;
+  const who=M.selName?`<b>${esc(M.selName)}</b>`:'a plan';
+  let h=`<div class="pvbar"><div><b>Preview</b> — ${who} from another phone${M.opp?' · vs '+esc(M.opp):''}. Nothing on your phone has changed.</div>
+    <div class="row" style="margin-top:10px"><button class="btn grow" data-a="pvSave">Save a copy</button><button class="btn alt" data-a="pvClose">Back to mine</button></div></div>`;
+  if(!M.plan)return h+`<div class="card"><div class="empty-state"><div class="big">No plan in this link</div>It was sent before plans were stored in links. You can still save a copy and press 🪄.</div></div>`;
+  return h+withState(st,()=>planView(true));
+}
+// take a plan from another phone: match players by name, add anyone missing, never remove anyone
+function adoptPlan(src){
+  const map={},added=[];
+  (src.panel.players||[]).forEach(p=>{let mine=state.panel.players.find(x=>normName(x.name)===normName(p.name));
+    if(!mine){mine={id:uid(),name:p.name,lines:(p.lines||[]).slice(),side:p.side||'E'};state.panel.players.push(mine);added.push(mine);}
+    map[p.id]=mine.id;});
+  const m=JSON.parse(JSON.stringify(src.match));
+  const mapKeys=o=>{const r={};Object.keys(o||{}).forEach(k=>{if(map[k])r[map[k]]=o[k];});return r;};
+  ['present','lock','benchStart','late','injured','rsvp','anchor','sitOut'].forEach(k=>m[k]=mapKeys(m[k]));
+  if(m.plan&&Array.isArray(m.plan.lineups))m.plan.lineups=m.plan.lineups.map(lu=>lu.map(id=>id&&map[id]?map[id]:null));
+  const done={};Object.keys(m.done||{}).forEach(k=>{const [t,a,b]=k.split('-');if(map[a]&&map[b])done[t+'-'+map[a]+'-'+map[b]]=true;});m.done=done;
+  return {match:normMatch(m),added};
+}
+
+/* ---------- saved selections (this phone) ---------- */
+const SAVES_KEY='gaa-planner-saves-v1';
+function loadSaves(){try{const a=JSON.parse(localStorage.getItem(SAVES_KEY));return Array.isArray(a)?a:[];}catch(e){return [];}}
+function storeSaves(a){try{localStorage.setItem(SAVES_KEY,JSON.stringify(a));return true;}catch(e){toast("Couldn't save — phone storage may be full");return false;}}
+function saveSelection(name,opt){
+  opt=opt||{};const list=loadSaves();
+  const entry={id:opt.id||uid(),name:String(name).slice(0,60),auto:!!opt.auto,savedAt:Date.now(),match:JSON.parse(JSON.stringify(state.match))};
+  const i=opt.id?list.findIndex(x=>x.id===opt.id):-1;if(i>=0)list.splice(i,1);
+  list.unshift(entry);
+  let autos=0;storeSaves(list.filter(x=>!x.auto||++autos<=5));
+  return entry;
+}
+function autoSave(reason){if(!state.match.plan)return;const nm=state.match.selName?state.match.selName+' ('+reason+')':'Unsaved plan ('+reason+')';saveSelection(nm,{auto:true});}
+function savedWhen(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
+function openSaved(id){
+  const e=loadSaves().find(x=>x.id===id);if(!e)return;
+  autoSave('before opening '+e.name);
+  state.match=normMatch(e.match);if(!e.auto){state.match.selId=e.id;state.match.selName=e.name;}
+  ui.sel=null;ui.view=0;ui.sheet=null;persist('match');toast('Opened '+e.name);
 }
 function loadFromHash(){
   const h=location.hash||'';if(!/[#&]s=/.test(h))return;
@@ -1316,9 +1373,24 @@ function act(a,el){
     case 'timing':ui.timing=ui.timing===id?null:id;ui.offFor=null;break;
     case 'reset':ui.confirmReset=true;break;
     case 'resetNo':ui.confirmReset=false;break;
-    case 'resetYes':Object.assign(M,{present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},plan:null,opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
+    case 'resetYes':autoSave('before new match');Object.assign(M,{selName:'',selId:'',present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},plan:null,opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
     case 'shuffle':M.seed=(M.seed%9973)+1;M.done={};M.moves=[];ui.sel=null;persist('match');toast('New combination');break;
     case 'view':ui.view=+v;ui.sel=null;break;
+    case 'plans':ui.saveName='';ui.delSave=null;ui.sheet={mode:'plans',title:'Plans for this match',note:''};break;
+    case 'saveNew':{const nm=(ui.saveName||'').trim()||('Plan '+(loadSaves().filter(x=>!x.auto).length+1));
+      M.selName=nm;const e=saveSelection(nm);M.selId=e.id;saveSelection(nm,{id:e.id});persist('match');ui.saveName='';toast('Saved “'+nm+'”');break;}
+    case 'saveSame':saveSelection(M.selName,{id:M.selId});toast('Saved');break;
+    case 'openSave':openSaved(v);break;
+    case 'delSave':ui.delSave=v;break;
+    case 'delSaveNo':ui.delSave=null;break;
+    case 'delSaveYes':storeSaves(loadSaves().filter(x=>x.id!==v));if(M.selId===v){M.selId='';persist('match');}ui.delSave=null;break;
+    case 'pvClose':ui.preview=null;ui.view=0;toast('Back to your plan');break;
+    case 'pvSave':{const src=ui.preview.state;autoSave('before saving a copy');
+      const r=adoptPlan(src);state.match=r.match;
+      const nm=(src.match.selName||'Plan')+' – from link'+(src.match.opp?' (vs '+src.match.opp+')':'');
+      state.match.selName=nm;const e=saveSelection(nm);state.match.selId=e.id;saveSelection(nm,{id:e.id});
+      ui.preview=null;ui.tab='plan';ui.view=0;persist('panel');persist('match');
+      toast('Saved “'+nm+'”'+(r.added.length?` · ${r.added.length} new player${r.added.length>1?'s':''} added to your panel`:''));break;}
     case 'wand':{const had=!!M.plan;wand();ui.sel=null;toast(had?'New selection — ↶ to go back':'Team suggested — tweak it by hand');break;}
     case 'undo':undoRedo(true);return;
     case 'redo':undoRedo(false);return;
@@ -1363,6 +1435,7 @@ document.addEventListener('input',e=>{
   else if(f==='bulk')ui.bulk=el.value;
   else if(f==='avail')ui.avail=el.value;
   else if(f==='pasteCode')ui.pasteCode=el.value;
+  else if(f==='saveName')ui.saveName=el.value;
   else if(f==='opp'){state.match.opp=el.value.slice(0,60);persist('match');}
   else if(f==='pname'){const p=findP(el.dataset.id);if(p){p.name=el.value.slice(0,60);persist('panel');}}
 });

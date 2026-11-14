@@ -18,7 +18,8 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
 2. **Here today tab:** set up the match. Tick who's here, set the half length and change times, and mark subs (**B**) and players who stay in one position (**🔒**).
 3. **Plan tab:** press the **🪄 wand** for a starting selection across the whole match.
 4. **Tweak by hand:** swap players to get the team you want. Use **↶ undo** and **↷ redo** if you change your mind.
-5. **Share:** send the pitch as a picture, or send the whole setup to another mentor's phone.
+5. **Share:** send the pitch as a picture, or send your plan to another mentor's phone.
+6. **Save** versions of your plan (📁 Plans) to compare them or come back to them later.
 
 ---
 
@@ -68,12 +69,21 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
   - **This quarter**: the team as it stands at that point. Handy at half-time or for showing players their shape.
   - **All quarters**: the team in every quarter, side by side.
 - The **share button** (top right of the page) also has:
-  - **Send to another phone:** a link that loads your whole setup (panel, attendance and plan) on another phone. Opening it replaces what's on that phone, after asking.
+  - **Send to another phone:** a link to your plan. On the other phone it opens as a **preview**. Nothing there changes unless they tap **Save a copy**, and **Back to mine** returns them to their own plan. Saving a copy matches players by name and adds anyone missing to their panel. Nobody is removed.
   - **Plan as WhatsApp text**
   - **Panel list**
   - **Load from a link**
 
+## 5. Saved plans
+
+- **📁 Plans** (Plan tab) keeps several versions of your plan for a match, for example "Plan A – strong start" and "Plan B – defensive".
+  - **Save as new** stores what's on the pitch now, under a name.
+  - **Save changes** updates the plan you have open.
+  - **Open** switches to a saved plan. **↶** takes you back.
+- Your current plan is **auto-saved** before you press 🪄, open another plan, save a copy from a link, or start a new match. The last 5 auto-saves are kept, so you can always get back to what you were working on.
+- Saved plans include who's here, the B and 🔒 marks, the formation and the line-ups. Your panel is shared by all of them.
+
 ## Good to know
 
-- Data stays in the browser on each phone. Add the page to your home screen. On iPhone, Safari can clear data for sites you haven't used in 7 days unless they're on the home screen.
+- Data, including saved plans, stays in the browser on each phone. Nothing syncs between mentors by itself. Add the page to your home screen. On iPhone, Safari can clear data for sites you haven't used in 7 days unless they're on the home screen.
 - A link contains the players' names (compressed, not encrypted). Only send it to people who should see the team.
