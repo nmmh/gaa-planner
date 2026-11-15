@@ -2,7 +2,8 @@
 // Uses only the made-up SAMPLE squad — never put real players' names in this repo.
 const {JSDOM}=require('jsdom');
 const fs=require('fs');const path=require('path');
-const HTML=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+// PLANNER_FILE=test/index.html runs the same tests against the test version
+const HTML=fs.readFileSync(path.join(__dirname,'..',process.env.PLANNER_FILE||'index.html'),'utf8');
 
 function recordingContext(log){
   const noop=()=>{};

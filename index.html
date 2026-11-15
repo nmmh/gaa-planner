@@ -134,6 +134,7 @@ textarea{min-height:120px;resize:vertical}
 .pbtn:disabled{opacity:.35;box-shadow:none}
 .nobody{color:rgba(255,255,255,.7);font-size:13px}
 .rotline{background:#eef3f9;color:#24456f;border-radius:10px;padding:8px 10px;margin:-2px 0 8px}
+.testbadge{font-style:normal;font-family:Barlow,sans-serif;font-size:11px;font-weight:800;background:var(--off);color:#fff;border-radius:6px;padding:2px 6px;vertical-align:middle;letter-spacing:.5px}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -193,13 +194,14 @@ function verHtml(){
 // on GitHub Pages, look up the commit this page was published from
 async function loadCommit(){
   if(!/github\.io$/.test(location.hostname))return;
-  try{const r=await fetch('https://api.github.com/repos/nmmh/gaa-planner/commits?path=index.html&per_page=1');if(!r.ok)return;
+  try{const r=await fetch('https://api.github.com/repos/nmmh/gaa-planner/commits?path='+(IS_TEST?'test/':'')+'index.html&per_page=1');if(!r.ok)return;
     const c=(await r.json())[0];if(!c)return;
     commitInfo={sha:c.sha.slice(0,7),url:c.html_url,date:new Date(c.commit.committer.date).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})};
     const f=document.querySelector('footer.ver');if(f)f.innerHTML=verHtml();
   }catch(e){}
 }
-const LS_KEY='hurling-sub-planner-v1';
+const IS_TEST=/\/test\//.test(location.pathname);
+const LS_KEY='hurling-sub-planner-v1'+(IS_TEST?'-test':'');
 
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -838,7 +840,7 @@ document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pend
 function render(){
   if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
   const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
-  $('#app').innerHTML=`<header><h1>GAA <span>Match Planner</span></h1>${syncPill()}<button class="sharebtn" data-a="shareMenu" aria-label="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
+  $('#app').innerHTML=`<header><h1>GAA <span>Match Planner</span>${IS_TEST?' <em class="testbadge">TEST</em>':''}</h1>${syncPill()}<button class="sharebtn" data-a="shareMenu" aria-label="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
 }
 function navView(){
   const pc=state.panel.players.length;
@@ -1131,7 +1133,7 @@ function adoptPlan(src){
 }
 
 /* ---------- saved selections (this phone) ---------- */
-const SAVES_KEY='gaa-planner-saves-v1';
+const SAVES_KEY='gaa-planner-saves-v1'+(IS_TEST?'-test':'');
 function loadSaves(){try{const a=JSON.parse(localStorage.getItem(SAVES_KEY));return Array.isArray(a)?a:[];}catch(e){return [];}}
 function storeSaves(a){try{localStorage.setItem(SAVES_KEY,JSON.stringify(a));return true;}catch(e){toast("Couldn't save — phone storage may be full");return false;}}
 function saveSelection(name,opt){

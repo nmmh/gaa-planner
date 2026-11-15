@@ -10,6 +10,10 @@ A one-page planner for underage hurling and gaelic football coaches: keep a pane
 
 To update the app, replace `index.html` and push to `main`.
 
+## Test version
+
+`test/index.html` is a trial copy at https://nmmh.github.io/gaa-planner/test/ (red TEST badge). It keeps its own saved data, so trying things there never touches the live page. Changes go to the test copy first; to release, copy `test/index.html` over `index.html`.
+
 ## Versions
 
 Still in development (0.x). The bottom of the page shows the version and the commit it was published from, linked to that commit here. See [help.md](help.md) for how to use it.
