@@ -64,12 +64,11 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
 
 ## 4. Sharing
 
-- **📷 Image** (Plan tab) makes a picture to share straight to WhatsApp. It's view-only, so it never changes anyone else's plan. Choose:
-  - **Whole plan** (the default): the starting team, the subs, and every change listed under the minute it happens. One picture explains the whole plan, which is best for mentors before the game.
-  - **This quarter**: the team as it stands at that point. Handy at half-time or for showing players their shape.
-  - **All quarters**: the team in every quarter, side by side.
+- **📷 Image** (Plan tab) makes a picture of the pitch exactly as it shows on screen for the period you're looking at. It includes the opposition, date, team size and match length at the top, and every box with any subs or position changes underneath the player's name. The bench is included; the 🪄 and ↶ ↷ buttons are left out. Share it straight to WhatsApp. It's view-only, so it never changes anyone else's plan.
+  - On **Q1**, each box lists every later change, such as "Q3 Fionn Ryan". That one picture explains the whole plan.
+  - Pick another period above the pitch first to picture the team at that point, which is handy at half-time.
 - The **share button** (top right of the page) also has:
-  - **Send to another phone:** a link to your plan. On the other phone it opens as a **preview**. Nothing there changes unless they tap **Save a copy**, and **Back to mine** returns them to their own plan. Saving a copy matches players by name and adds anyone missing to their panel. Nobody is removed.
+  - **Send to another phone:** a link to your plan. When another mentor opens it they choose **Save to Plans**, which keeps their own plan, or **Replace my current plan**, which auto-saves theirs first so ↶ brings it back. Players are matched by name. Anyone in the plan who's missing from their panel is added, and nobody is removed.
   - **Plan as WhatsApp text**
   - **Panel list**
   - **Load from a link**
@@ -80,7 +79,7 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
   - **Save as new** stores what's on the pitch now, under a name.
   - **Save changes** updates the plan you have open.
   - **Open** switches to a saved plan. **↶** takes you back.
-- Your current plan is **auto-saved** before you press 🪄, open another plan, save a copy from a link, or start a new match. The last 5 auto-saves are kept, so you can always get back to what you were working on.
+- Your current plan is **auto-saved** before you press 🪄, open another plan, replace it with one from a link, or start a new match. The last 5 auto-saves are kept, so you can always get back to what you were working on.
 - Saved plans include who's here, the B and 🔒 marks, the formation and the line-ups. Your panel is shared by all of them.
 
 ## Good to know

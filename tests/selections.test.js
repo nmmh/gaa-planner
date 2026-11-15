@@ -6,45 +6,54 @@ const byName=app=>app.json(`(()=>{const n=id=>{const p=state.panel.players.find(
 
 async function linkFrom(setup){const a=loadApp();setupMatch(a,{n:16});a.run(`state.match.opp='Test Rovers';${setup||''}wand()`);return {a,code:await a.run('encodeState()')};}
 
-test('a link opens as a preview and changes nothing until you save a copy',async()=>{
-  const {a,code}=await linkFrom();
+const openLink=async(b,code)=>{b.run(`offerImport(${JSON.stringify(code)})`);await sleep(150);};
+
+test('opening a link asks: Save to Plans, Replace my current plan, or Cancel',async()=>{
+  const {code}=await linkFrom();
   const b=loadApp();setupMatch(b,{n:12});b.run('wand()');const mine=b.json('state');
-  b.run(`offerImport(${JSON.stringify(code)})`);await sleep(150);
-  assert.match(b.d.querySelector('.pvbar').textContent,/Preview/);
-  assert.match(b.d.querySelector('main').textContent,/vs Test Rovers/);
-  assert.equal(b.d.querySelectorAll('[data-dz]').length,0,'preview must not be editable');
-  assert.deepEqual(b.json('state'),mine,'previewing changed this phone');
-  b.click('[data-a=pvClose]');assert.equal(b.d.querySelector('.pvbar'),null);
-  assert.deepEqual(b.json('state'),mine);
+  await openLink(b,code);
+  const sheet=b.d.querySelector('.sheet').textContent;
+  assert.match(sheet,/vs Test Rovers/);assert.match(sheet,/16 here/);
+  ['incSave','incReplace','sheetClose'].forEach(a=>assert.ok(b.d.querySelector(`[data-a=${a}]`),a));
+  b.click('[data-a=sheetClose]');
+  assert.deepEqual(b.json('state'),mine,'cancel must change nothing');
 });
 
-test('save a copy: players matched by name, missing ones added, nobody removed',async()=>{
+test('Save to Plans keeps my current plan and stores theirs by name',async()=>{
   const {a,code}=await linkFrom();
-  const b=loadApp();setupMatch(b,{n:12}); // same first 12 names, different ids on this phone
-  b.run(`state.panel.players.push({id:'only-mine',name:'Somebody Else',lines:[2],side:'E'})`);
-  const before=b.json('state.panel.players.length');
-  b.run(`offerImport(${JSON.stringify(code)})`);await sleep(150);b.click('[data-a=pvSave]');
-  assert.equal(b.json('state.panel.players.length'),before+4,'4 players missing from this phone should be added');
-  assert.ok(b.json(`state.panel.players.some(p=>p.id==='only-mine')`));
-  assert.deepEqual(byName(b),byName(a),'line-ups must be the same people in the same places');
-  assert.match(b.json('state.match.selName'),/from link \(vs Test Rovers\)/);
-  assert.ok(b.json('loadSaves().some(x=>x.name===state.match.selName)'));
+  const b=loadApp();setupMatch(b,{n:12});b.run(`state.panel.players.push({id:'only-mine',name:'Somebody Else',lines:[2],side:'E'});wand()`);
+  const myMatch=b.json('state.match'),n0=b.json('loadSaves().length');
+  await openLink(b,code);b.click('[data-a=incSave]');
+  assert.deepEqual(b.json('state.match'),myMatch,'current plan must not change');
+  assert.equal(b.json('loadSaves().length'),n0+1);
+  assert.ok(b.json(`state.panel.players.some(p=>p.id==='only-mine')`),'nobody removed');
+  const saved=b.json('loadSaves()[0]');assert.match(saved.name,/from link \(vs Test Rovers\)/);
+  b.run(`openSaved(${JSON.stringify(saved.id)})`);
+  assert.deepEqual(byName(b),byName(a),'same people in the same places');
+});
+
+test('Replace my current plan: auto-saves mine first and ↶ brings it back',async()=>{
+  const {a,code}=await linkFrom();
+  const b=loadApp();setupMatch(b,{n:12});b.run(`wand();ui.tab='plan';render()`);const myL=b.json('state.match.plan.lineups');
+  await openLink(b,code);b.click('[data-a=incReplace]');
+  assert.deepEqual(byName(b),byName(a));
+  assert.ok(b.json('loadSaves().some(x=>x.auto)'),'my plan should be auto-saved');
+  assert.equal(b.json('state.match.selId'),'');
+  b.click('[data-a=undo]');assert.deepEqual(b.json('state.match.plan.lineups'),myL);
   assert.deepEqual(b.errors,[]);
 });
 
-test('a link from before v0.5 previews without a plan',async()=>{
-  const a=loadApp();setupMatch(a,{n:16});a.run('delete state.match.plan');const code=await a.run('encodeState()');
-  const b=loadApp();b.run(`offerImport(${JSON.stringify(code)})`);await sleep(150);
-  assert.match(b.d.querySelector('main').textContent,/No plan in this link/);
+test('only players in their plan are added to my panel',async()=>{
+  const a=loadApp();setupMatch(a,{n:18});a.run(`delete state.match.present[state.panel.players[17].id];wand()`);
+  const code=await a.run('encodeState()');
+  const b=loadApp();setupMatch(b,{n:5});await openLink(b,code);b.click('[data-a=incSave]');
+  assert.equal(b.json('state.panel.players.length'),17,'the unticked 18th player should not be added');
 });
 
-test('picture from a preview shows the previewed plan',async()=>{
-  const {a,code}=await linkFrom();const names=a.json(`derive().starters.filter(Boolean).map(p=>shortName(p.name))`);
-  const b=loadApp();setupMatch(b,{n:12});b.run(`state.match.opp='My Own Match';wand()`);
-  b.run(`offerImport(${JSON.stringify(code)})`);await sleep(150);
-  b.drawn.length=0;await b.run(`buildImage('plan',ui.preview.state)`);
-  assert.ok(b.drawn.some(t=>t.includes('Test Rovers')));assert.ok(!b.drawn.some(t=>t.includes('My Own Match')));
-  names.forEach(n=>assert.ok(b.drawn.includes(n),n));
+test('a link from before v0.5 says it has no line-ups',async()=>{
+  const a=loadApp();setupMatch(a,{n:16});a.run('delete state.match.plan');const code=await a.run('encodeState()');
+  const b=loadApp();await openLink(b,code);
+  assert.match(b.d.querySelector('.sheet').textContent,/no line-ups/);
 });
 
 test('saved plans: save, auto-save before the wand, open again, undo the open, delete',()=>{

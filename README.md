@@ -5,7 +5,7 @@ A one-page planner for underage hurling and gaelic football coaches: keep a pane
 **Open it:** https://nmmh.github.io/gaa-planner/
 
 - Everything is stored on your own phone (browser storage). No player data is uploaded or kept in this repository.
-- **Send to another phone** (share button) creates a link to your plan. It opens as a preview on their phone, and they can save a copy without losing their own.
+- **Send to another phone** (share button) creates a link to your plan. They can save it to their Plans or replace their current plan with it.
 - **Load ClubZap RSVP report** reads a ClubZap RSVP `.csv` to build the panel or tick who's coming.
 
 To update the app, replace `index.html` and push to `main`.
@@ -14,6 +14,7 @@ To update the app, replace `index.html` and push to `main`.
 
 Still in development (0.x). The bottom of the page shows the version and the commit it was published from, linked to that commit here. See [help.md](help.md) for how to use it.
 
+- **v0.8** — Picture is now the pitch exactly as on screen (heading, boxes with their sub/position-change lines, bench) for the period you're viewing; the separate Changes list and the Whole plan / All quarters options are gone. Opening a link no longer previews: choose **Save to Plans** (keeps your plan) or **Replace my current plan** (auto-saved first, ↶ to undo). Only players in the sender's plan are added to your panel. Screen and picture are drawn from the same data, with a test that their text matches.
 - **v0.7.1** — A position swap now sticks for the rest of the match even when one of the two players is subbed later (the sub comes on in the spot of the player they replace). Send-to-phone wording updated for previews. No false "Saved" message if the phone can't store it.
 - **v0.7** — Saved plans (📁 Plans): save, open and delete named versions per match on this phone; auto-save before 🪄, opening a plan, saving a copy or a new match (last 5 kept). Links now open as a read-only **preview** with **Save a copy** (players matched by name, missing ones added) and **Back to mine**; nothing changes until you save.
 - **v0.6** — Picture: **Whole plan** (starting team, subs, every change under its minute) is the default; this quarter / all quarters still available. Swapping two pitch players now changes positions only, never who sits out later. Sub ticks survive edits. Pitch labels use minutes when change times aren't quarters. Wand evens minutes better when change times are uneven. Undo history clears when you load a link. Automated tests in `tests/` (`npm install && npm test`).
