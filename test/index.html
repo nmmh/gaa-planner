@@ -12,26 +12,33 @@
   --pitch:#1e6a3a; --pitch2:#22743f; --accent:#f2b632; --accent-ink:#4a3500;
   --on:#1f8a4c; --off:#c2412d; --blue:#2f5fa8;
   --r:14px;
+  --head:"Barlow Condensed","Roboto Condensed","Avenir Next Condensed","Arial Narrow",sans-serif-condensed,system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,system-ui,sans-serif;font-size:16px;-webkit-text-size-adjust:100%}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 #app{max-width:640px;margin:0 auto;padding:0 12px 96px}
-header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 2px 8px;display:flex;align-items:center;gap:10px}
-header h1{font-family:"Barlow Condensed",sans-serif;font-size:22px;white-space:nowrap;margin:0;letter-spacing:.3px;flex:1;line-height:1}
-header h1 span{color:var(--pitch)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 2px 8px;display:flex;align-items:center;gap:8px}
+header h1{font-family:var(--head);font-size:21px;white-space:nowrap;margin:0;letter-spacing:.3px;flex:1;min-width:0;display:flex;align-items:center;gap:6px;line-height:1.15}
+header h1 .ttl{min-width:0;overflow:hidden;text-overflow:ellipsis}
+header h1 .testbadge{flex:none}
+header .pill{flex:none}
+@media (max-width:399px){header h1{font-size:20px}header .pill{font-size:11px;padding:4px 7px}}
+@media (max-width:439px){header:has(.pill) h1:has(.testbadge){font-size:18px}header:has(.pill) h1:has(.testbadge) .g{display:none}}
+header h1 .ttl span{color:var(--pitch)}
+header h1 .g{font-style:normal}
 .pill{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:#e6ebe2;color:var(--muted);white-space:nowrap}
 .pill.live{background:#dff2e5;color:#17663a}
 .pill.warn{background:#fdecc8;color:#7a5200}
 nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:6;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center}
 nav.tabs .in{display:flex;max-width:640px;width:100%}
 nav.tabs button{flex:1;border:0;background:none;padding:10px 4px 14px;font-weight:600;font-size:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
-nav.tabs button b{font-family:"Barlow Condensed";font-size:20px;line-height:1}
+nav.tabs button b{font-family:var(--head);font-size:20px;line-height:1}
 nav.tabs button.on{color:var(--pitch)}
 nav.tabs button.on b{color:var(--pitch)}
 .card{background:var(--card);border-radius:var(--r);padding:14px;margin:10px 0;box-shadow:0 1px 0 var(--line)}
-.card h2{font-family:"Barlow Condensed";font-size:20px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h2{font-family:var(--head);font-size:20px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .card h2 .sp{flex:1}
 .muted{color:var(--muted)}
 .small{font-size:13px}
@@ -84,11 +91,11 @@ textarea{min-height:120px;resize:vertical}
 .att .who{display:flex;flex:1;align-items:center;gap:10px;min-width:0;border:0;background:none;padding:0;text-align:left}
 .timing{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0 10px 40px}
 .timing label{font-size:12px;font-weight:600;color:var(--muted)}
-.counter{font-family:"Barlow Condensed";font-size:28px;line-height:1;color:var(--pitch)}
+.counter{font-family:var(--head);font-size:28px;line-height:1;color:var(--pitch)}
 /* plan */
 .summary{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
 .stat{background:#fff;border-radius:12px;padding:8px 12px;flex:none;box-shadow:0 1px 0 var(--line)}
-.stat b{display:block;font-family:"Barlow Condensed";font-size:24px;line-height:1}
+.stat b{display:block;font-family:var(--head);font-size:24px;line-height:1}
 .stat span{font-size:12px;color:var(--muted);font-weight:600}
 .warnbox{background:#fff6e0;border:1px solid #f3dfa8;color:#6b4a00;border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px}
 .warnbox div+div{margin-top:5px}
@@ -138,8 +145,8 @@ textarea{min-height:120px;resize:vertical}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
-.tl .t{font-family:"Barlow Condensed";font-size:24px;width:48px;flex:none;color:var(--pitch);line-height:1.1}
-.tl .t small{display:block;font-family:Barlow;font-size:11px;color:var(--muted);font-weight:600}
+.tl .t{font-family:var(--head);font-size:24px;width:48px;flex:none;color:var(--pitch);line-height:1.1}
+.tl .t small{display:block;font-family:Barlow,system-ui,sans-serif;font-size:11px;color:var(--muted);font-weight:600}
 .sw{display:flex;align-items:center;gap:8px;padding:4px 0}
 .sw .txt{flex:1;min-width:0;font-size:15px;line-height:1.3}
 .on-n{color:var(--on);font-weight:700}
@@ -152,7 +159,7 @@ textarea{min-height:120px;resize:vertical}
 .mbar .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .mbar .m{text-align:right;font-weight:700}
 .empty-state{text-align:center;padding:30px 10px;color:var(--muted)}
-.empty-state .big{font-family:"Barlow Condensed";font-size:26px;color:var(--ink);margin-bottom:6px}
+.empty-state .big{font-family:var(--head);font-size:26px;color:var(--ink);margin-bottom:6px}
 .sheet-bg{position:fixed;inset:0;background:rgba(10,20,14,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:#fff;width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px;max-height:85vh;overflow:auto}
 .sheet textarea{min-height:260px;font-size:14px;font-family:ui-monospace,Menlo,monospace}
@@ -165,6 +172,31 @@ details summary{cursor:pointer;font-weight:600;color:var(--pitch)}
 .sw-ui::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
 .sw-ui.on{background:var(--pitch)}
 .sw-ui.on::after{left:21px}
+/* polish: plan title, heading fonts, tap targets */
+.plantitle{margin:6px 2px 2px;min-width:0;overflow-wrap:anywhere}
+.plantitle .pt{font-family:var(--head);font-weight:700;font-size:22px;line-height:1.1}
+.card h2 .btn,.card h2 .small{font-family:Barlow,system-ui,sans-serif}
+.card h2 .small{font-weight:500}
+.btn{min-height:40px}
+.btn.sm{min-width:40px}
+.chip{min-height:40px}
+.chips input{min-height:40px}
+.seg button{min-height:40px}
+.iconbtn{min-width:40px;height:40px}
+.stepper button{width:40px;height:40px}
+.pbtn{height:40px}
+.att .who{min-height:40px}
+.toggle{min-height:44px}
+details summary{padding:10px 0}
+.sw button.tick{position:relative}
+.sw button.tick::after{content:"";position:absolute;inset:-7px}
+.addbox .chips,.edit .chips{gap:5px}
+/* polish: number badge clear of the name, readability outdoors */
+.slot{padding-top:8px}
+.slot .num{top:-9px;left:-5px;min-width:20px;height:20px;font-size:11.5px}
+.pitch .lineTag{color:rgba(255,255,255,.8)}
+.att.absent .nm{color:#717d74}
+.hint{font-size:13px;line-height:1.35}
 </style>
 </head>
 <body>
@@ -840,7 +872,7 @@ document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pend
 function render(){
   if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
   const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
-  $('#app').innerHTML=`<header><h1>GAA <span>Match Planner</span>${IS_TEST?' <em class="testbadge">TEST</em>':''}</h1>${syncPill()}<button class="sharebtn" data-a="shareMenu" aria-label="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
+  $('#app').innerHTML=`<header><h1><span class="ttl"><i class="g">GAA </i><span>Match Planner</span></span>${IS_TEST?'<em class="testbadge">TEST</em>':''}</h1>${syncPill()}<button class="sharebtn" data-a="plans" aria-label="Plans" title="Plans"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2.5 3H18.5A2.5 2.5 0 0 1 21 10.5V16.5A2.5 2.5 0 0 1 18.5 19H5.5A2.5 2.5 0 0 1 3 16.5z"/></svg></button><button class="sharebtn" data-a="shareMenu" aria-label="Share" title="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
 }
 function navView(){
   const pc=state.panel.players.length;
@@ -919,7 +951,7 @@ function rotationLine(M,ps){
   else t=`${R.benchN} must sit out each period. No B marked, so <b>everyone rotates</b>. Mark B on the players who should share the bench.`;
   return `<div class="rotline small">${t}</div>`;
 }
-function rsvpTag(c){return c==='A'?'<span class="tag" style="background:#dff2e5;color:#17663a">RSVP ✓</span>':c==='X'?'<span class="tag" style="background:#fbe1dc;color:#a8321f">not coming</span>':'<span class="tag" style="background:#eceee9;color:#7a857c">no reply</span>';}
+function rsvpTag(c){return c==='A'?'<span class="tag" style="background:#dff2e5;color:#17663a">RSVP ✓</span>':c==='X'?'<span class="tag" style="background:#fbe1dc;color:#a8321f">not coming</span>':'<span class="tag" style="background:#eceee9;color:#5d6b61">no reply</span>';}
 function stepper(act,val,extra){return `<div class="stepper"><button data-a="${act}" data-v="-1" ${extra||''}>−</button><span>${val}</span><button data-a="${act}" data-v="1" ${extra||''}>+</button></div>`;}
 
 function formationControl(){
@@ -987,11 +1019,10 @@ function matchView(){
 function planView(){
   const M=state.match,P=derive();
   if(!state.panel.players.length||!P.present.length){
-    return `<div class="card"><div class="empty-state"><div class="big">Nothing to plan yet</div>${!state.panel.players.length?'Add your panel first.':'Tick who is here on the <b>Here today</b> tab.'}<br><br><button class="btn" data-a="tab" data-v="${state.panel.players.length?'match':'panel'}">Go</button></div></div>`;
+    return `<div class="card"><div class="empty-state"><div class="big">Nothing to plan yet</div>${!state.panel.players.length?'Add your panel first.':'Tick who is here on the <b>Here today</b> tab.'}<br><br><button class="btn" data-a="tab" data-v="${state.panel.players.length?'match':'panel'}">${state.panel.players.length?'Go to Here today':'Go to Panel'}</button></div></div>`;
   }
   const dateTxt=M.date?new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):'';
-  let h=`<div class="row" style="margin:6px 0 2px"><div class="grow"><div style="font-family:'Barlow Condensed';font-size:22px;line-height:1.1">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div>${M.selName?`<div class="small" style="margin-top:2px">📁 <b>${esc(M.selName)}</b></div>`:''}</div>
-    <button class="btn alt sm" data-a="plans" title="Saved selections">📁 Plans</button></div>`;
+  let h=`<div class="plantitle"><div class="pt">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div>${M.selName?`<div class="small" style="margin-top:2px">📁 <b>${esc(M.selName)}</b></div>`:''}</div>`;
   h+=`<div class="card" style="padding:10px 14px"><div class="lbl">Team size</div>
     <div class="seg">${[7,9,11,13,15].map(n=>`<button class="${M.size===n?'on':''}" data-a="size" data-v="${n}">${n}</button>`).join('')}</div>${formationControl()}</div>`;
   const subsN=P.timeline.reduce((a,e)=>a+e.items.filter(i=>i.kind==='sub'||i.kind==='fill').length,0);
@@ -1006,8 +1037,8 @@ function planView(){
   const selKey=ui.sel?(ui.sel.slot!=null?'s'+ui.sel.slot:'p'+ui.sel.pid):'';
   h+=`<div class="row" style="margin-top:12px"><div class="seg grow">${P.periods.map((x,i)=>`<button class="${i===vi?'on':''}" data-a="view" data-v="${i}">${periodName(i,x.a,x.b,M)}</button>`).join('')}</div></div>`;
   h+=`<div class="hint">${ui.sel?'Now tap another position or a bench player to swap · tap again to cancel':(P.plan?'Tap a player, then another, to swap — or press and hold to drag. Changes apply from '+(vi===0?'the start':periodName(vi,pr.a,pr.b,M))+' on.':'Press 🪄 for a starting selection, then tweak it by hand.')}</div>`;
-  h+=`<div class="pitch"><div class="pitchbar"><button class="pbtn wand" data-a="wand" title="${P.plan?'New automatic selection':'Fill the team automatically'}">🪄${P.plan?'':' <span>Suggest team</span>'}</button><span class="sp"></span>
-    <button class="pbtn" id="undoBtn" data-a="undo" title="Undo" ${undoStack.length?'':'disabled'}>↶</button><button class="pbtn" id="redoBtn" data-a="redo" title="Redo" ${redoStack.length?'':'disabled'}>↷</button></div>`;
+  h+=`<div class="pitch"><div class="pitchbar"><button class="pbtn wand" data-a="wand" aria-label="Suggest team" title="${P.plan?'New automatic selection':'Fill the team automatically'}">🪄${P.plan?'':' <span>Suggest team</span>'}</button><span class="sp"></span>
+    <button class="pbtn" id="undoBtn" data-a="undo" title="Undo" aria-label="Undo" ${undoStack.length?'':'disabled'}>↶</button><button class="pbtn" id="redoBtn" data-a="redo" title="Redo" aria-label="Redo" ${redoStack.length?'':'disabled'}>↷</button></div>`;
   PM.lines.forEach(ln=>{
     h+=`<div class="lineTag">${ln.name}</div><div class="lineRow">`+ln.boxes.map(x=>
       `<div class="slot ${x.bad?'fit-bad':''} ${selKey==='s'+x.slot?'sel':''}" data-a="pick" data-slot="${x.slot}" data-dz="1"><span class="num">${x.num}</span><b class="${x.empty?'empty':''}">${esc(x.name)}</b><div class="pos">${x.pos}${x.lock?' <span class="anc">🔒</span>':''}</div>${x.chg.map(c=>`<div class="chg ${c.mv?'mv':''}">${esc(c.t)}</div>`).join('')}</div>`).join('')+`</div>`;
@@ -1081,7 +1112,7 @@ function sheetView(){
     body=`<textarea readonly id="sheetText">${esc(S.text)}</textarea>
     <div class="row" style="margin-top:10px"><button class="btn grow" data-a="sheetCopy">Copy</button>${S.wa?`<a class="btn acc" style="text-decoration:none" href="${esc(S.wa)}" target="_blank" rel="noopener">Open WhatsApp</a>`:''}<button class="btn alt" data-a="sheetClose">Close</button></div>`;
   }
-  return `<div class="sheet-bg" data-a="sheetBg"><div class="sheet"><h2 style="font-family:'Barlow Condensed';margin:0 0 8px">${esc(S.title)}</h2>
+  return `<div class="sheet-bg" data-a="sheetBg"><div class="sheet"><h2 style="font-family:var(--head);margin:0 0 8px">${esc(S.title)}</h2>
     <p class="small muted" style="margin-top:0">${S.noteHtml||esc(S.note||'')}</p>${body}</div></div>`;
 }
 
