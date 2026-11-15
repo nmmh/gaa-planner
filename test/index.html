@@ -142,6 +142,17 @@ textarea{min-height:120px;resize:vertical}
 .nobody{color:rgba(255,255,255,.7);font-size:13px}
 .rotline{background:#eef3f9;color:#24456f;border-radius:10px;padding:8px 10px;margin:-2px 0 8px}
 .testbadge{font-style:normal;font-family:Barlow,sans-serif;font-size:11px;font-weight:800;background:var(--off);color:#fff;border-radius:6px;padding:2px 6px;vertical-align:middle;letter-spacing:.5px}
+.hbtn{height:40px;min-height:40px;flex:none;white-space:nowrap}
+@media (max-width:420px){header h1 .g{display:none}header h1:has(.testbadge){font-size:18px}.hbtn{padding-left:10px;padding-right:10px}}
+.sharetxt{display:inline-flex;align-items:center;gap:6px}
+.tlbl{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+.tlbl input{width:100%}
+input[type=time]{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfcfa;font-size:16px;min-height:44px}
+.key{display:grid;gap:4px;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.key .kb{display:inline-grid;place-items:center;min-width:26px;height:24px;border-radius:7px;background:#eef2ea;color:var(--ink);font-weight:800;margin-right:8px;font-size:13px}
+.tickrow{cursor:pointer;border-radius:10px}
+.tickrow:active{background:#f1f5ee}
+.btn:disabled{opacity:.45}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -250,7 +261,7 @@ function periodName(i,a,b,M){return isQuarters(M)?'Q'+(i+1):(fm(a)+'–'+fm(b)+"
 
 function defaultMatch(){
   return {opp:'',date:'',size:15,form:DEFAULT_FORM[15].slice(),half:25,subs:6,windows:[12.5,25,37.5],rolling:true,
-    present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{},plan:null};
+    present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},seed:1,done:{},equal:true,moves:[],rsvp:{},plan:null,throwIn:'',meetUp:'',meetAuto:true};
 }
 function autoWindows(T,S){
   if(S<=0)return [];
@@ -281,6 +292,8 @@ function normMatch(m){
   o.half=Math.max(5,Math.min(60,+o.half||30));
   o.subs=Math.max(0,Math.min(40,+o.subs||0));
   o.windows=Array.isArray(o.windows)?[...new Set(o.windows.map(n=>Math.round(+n*2)/2))].filter(n=>n>0&&n<o.half*2):[];
+  const hhmm=v=>typeof v==='string'&&/^\d{2}:\d{2}$/.test(v)?v:'';
+  o.throwIn=hhmm(o.throwIn);o.meetUp=hhmm(o.meetUp);o.meetAuto=o.meetAuto!==false;
   o.rolling=o.rolling!==false;o.selName=typeof o.selName==='string'?o.selName.slice(0,60):'';o.selId=typeof o.selId==='string'?o.selId:'';o.moves=Array.isArray(o.moves)?o.moves.filter(m=>m&&m.id&&m.a&&typeof m.t==='number'):[];o.equal=!!o.equal;
   o.seed=+o.seed||1;
   return o;
@@ -720,9 +733,11 @@ function pitchModel(P,M,vi){
   });
   return {lines,benchTag:'Bench · '+periodName(vi,pr.a,pr.b,M),bench:pr.off.map(p=>({pid:p.id,name:shortName(p.name)})),late:pr.notYet.map(p=>shortName(p.name)+' · late')};
 }
+function addMins(hm,d){if(!hm)return '';const [h,m]=hm.split(':').map(Number);let t=((h*60+m+d)%1440+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
+function timesText(M){return [M.throwIn?'Throw-in '+M.throwIn:'',M.meetUp?'Meet '+M.meetUp:''].filter(Boolean).join(' · ');}
 function headingModel(P,M,vi,long){
   const d=M.date?new Date(M.date+'T12:00').toLocaleDateString(undefined,long?{weekday:'long',day:'numeric',month:'long'}:{weekday:'short',day:'numeric',month:'short'}):'';
-  return {title:M.opp?'vs '+M.opp:'Match plan',sub:[d,P.slots.length+'-a-side','2×'+M.half+' mins'].filter(Boolean).join(' · ')};
+  return {title:M.opp?'vs '+M.opp:'Match plan',sub:[d,P.slots.length+'-a-side','2×'+M.half+' mins'].filter(Boolean).join(' · '),times:timesText(M)};
 }
 /* ---------- pitch picture ---------- */
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -744,11 +759,12 @@ async function buildImage(st){
   const chipRows=[];let row=[],rw=0;chips.forEach(c=>{const w=chipW(c);if(row.length&&rw+gap+w>inner){chipRows.push(row);row=[];rw=0;}row.push(c);rw+=(row.length>1?gap:0)+w;});if(row.length)chipRows.push(row);
   let ph=10*k;PM.lines.forEach(ln=>{ph+=8*k+14*k+6*k+Math.max(...ln.boxes.map(boxH))+6*k;});
   ph+=12*k+4*k+8*k+14*k+6*k+Math.max(1,chipRows.length)*(32*k+6*k)+12*k;
-  const headH=78*k,H=headH+ph+30*k;
+  const headH=(HD.times?100:78)*k,H=headH+ph+30*k;
   const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
   ctx.fillStyle='#f3f5ef';ctx.fillRect(0,0,W,H);ctx.textBaseline='alphabetic';ctx.textAlign='left';
   ctx.fillStyle='#14251a';ctx.font=`700 ${24*k}px "Barlow Condensed", sans-serif`;ctx.fillText(fitText(ctx,HD.title,W-2*pad),pad,34*k);
   ctx.fillStyle='#5d6b61';ctx.font=`500 ${13*k}px Barlow, sans-serif`;ctx.fillText(fitText(ctx,HD.sub,W-2*pad),pad,54*k);
+  if(HD.times){ctx.fillStyle='#14251a';ctx.font=`700 ${14*k}px Barlow, sans-serif`;ctx.fillText(fitText(ctx,HD.times,W-2*pad),pad,76*k);}
   // the green pitch with its stripes
   const px=pad,py=headH-10*k;
   ctx.save();rr(ctx,px,py,pw,ph,14*k);ctx.clip();
@@ -872,7 +888,7 @@ document.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender){pend
 function render(){
   if(!ui.tab)ui.tab=state.panel.players.length?(Object.keys(state.match.present).length?'plan':'match'):'panel';
   const v=ui.tab==='panel'?panelView():ui.tab==='match'?matchView():planView();
-  $('#app').innerHTML=`<header><h1><span class="ttl"><i class="g">GAA </i><span>Match Planner</span></span>${IS_TEST?'<em class="testbadge">TEST</em>':''}</h1>${syncPill()}<button class="sharebtn" data-a="plans" aria-label="Plans" title="Plans"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2.5 3H18.5A2.5 2.5 0 0 1 21 10.5V16.5A2.5 2.5 0 0 1 18.5 19H5.5A2.5 2.5 0 0 1 3 16.5z"/></svg></button><button class="sharebtn" data-a="shareMenu" aria-label="Share" title="Share"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
+  $('#app').innerHTML=`<header><h1><span class="ttl"><i class="g">GAA </i><span>Match Planner</span></span>${IS_TEST?'<em class="testbadge">TEST</em>':''}</h1>${syncPill()}<button class="btn alt sm hbtn" data-a="plans" aria-label="Saved plans">📁 Plans</button><button class="btn sm hbtn sharetxt" data-a="shareMenu" aria-label="Share"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="2" fill="none"/></svg>Share</button></header><main>${v}</main><footer class="ver">${verHtml()}</footer>${navView()}${sheetView()}`;
 }
 function navView(){
   const pc=state.panel.players.length;
@@ -951,6 +967,7 @@ function rotationLine(M,ps){
   else t=`${R.benchN} must sit out each period. No B marked, so <b>everyone rotates</b>. Mark B on the players who should share the bench.`;
   return `<div class="rotline small">${t}</div>`;
 }
+function canSave(){const M=state.match;return !!M.plan||Object.keys(M.present).length>0;}
 function rsvpTag(c){return c==='A'?'<span class="tag" style="background:#dff2e5;color:#17663a">RSVP ✓</span>':c==='X'?'<span class="tag" style="background:#fbe1dc;color:#a8321f">not coming</span>':'<span class="tag" style="background:#eceee9;color:#5d6b61">no reply</span>';}
 function stepper(act,val,extra){return `<div class="stepper"><button data-a="${act}" data-v="-1" ${extra||''}>−</button><span>${val}</span><button data-a="${act}" data-v="1" ${extra||''}>+</button></div>`;}
 
@@ -975,6 +992,8 @@ function matchView(){
   const T=M.half*2;
   let h=`<div class="card"><h2>Match</h2>
     <div class="grid2"><input type="text" data-f="opp" placeholder="Opposition" value="${esc(M.opp)}"><input type="date" data-f="date" value="${esc(M.date)}"></div>
+    <div class="grid2" style="margin-top:8px"><label class="tlbl">Throw-in<input type="time" data-f="throwIn" value="${esc(M.throwIn)}"></label><label class="tlbl">Meet-up<input type="time" data-f="meetUp" value="${esc(M.meetUp)}"></label></div>
+    ${M.meetAuto&&M.throwIn?'<div class="small muted" style="margin-top:4px;text-align:right">Meet-up defaults to ½ hour before throw-in</div>':''}
     <div class="lbl">Half length (mins)</div>${stepper('half',M.half)}
     <div class="lbl">Change times <span style="text-transform:none;font-weight:500">(minutes into the game; ${T} total)</span></div>
     <div class="chips">${M.windows.slice().sort((a,b)=>a-b).map(t=>`<button class="chip on" data-a="winDel" data-v="${t}">${minLabel(t,M)} ✕</button>`).join('')}
@@ -993,7 +1012,8 @@ function matchView(){
         <button class="btn wide" style="margin-top:8px" data-a="availApply">Tick these players</button>
         ${ui.availMsg?`<div class="warnbox" style="margin-bottom:0">${ui.availMsg}</div>`:''}
       </details>
-      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. <b>B</b> rotation player — shares the bench time · <b>🔒</b> stays in one position · <b>⏱</b> late or injured. These guide the 🪄 wand on the Plan tab.</p>${rotationLine(M,ps)}`;
+      <p class="small muted" style="margin:-4px 0 4px">Tick who turned up. For each player here:</p>
+      <div class="key"><div><span class="kb">B</span>Rotation player — shares the bench time</div><div><span class="kb">🔒</span>Stays in one position</div><div><span class="kb">⏱</span>Arrives late or goes off injured</div></div>${rotationLine(M,ps)}`;
   if(!ps.length)h+=`<div class="empty-state">Add players on the Panel tab first.</div>`;
   const pl=periodList(M);
   ps.forEach(p=>{
@@ -1011,8 +1031,6 @@ function matchView(){
   });
   h+=`</div>`;
   if(ps.length)h+=`<button class="btn acc wide" data-a="tab" data-v="plan" style="margin:6px 0 10px">See the plan ▶</button>`;
-  h+=`<div class="card"><h2>New match</h2><p class="small muted" style="margin-top:0">Clears attendance, B/🔒 marks, late/injured, ticks and the plan. Keeps the panel and settings.</p>
-    ${ui.confirmReset?`<div class="row"><span class="grow small">Clear everything for a new match?</span><button class="btn alt sm" data-a="resetNo">Cancel</button><button class="btn warn sm" data-a="resetYes">Clear</button></div>`:`<button class="btn alt" data-a="reset">Start a new match</button>`}</div>`;
   return h;
 }
 
@@ -1022,7 +1040,7 @@ function planView(){
     return `<div class="card"><div class="empty-state"><div class="big">Nothing to plan yet</div>${!state.panel.players.length?'Add your panel first.':'Tick who is here on the <b>Here today</b> tab.'}<br><br><button class="btn" data-a="tab" data-v="${state.panel.players.length?'match':'panel'}">${state.panel.players.length?'Go to Here today':'Go to Panel'}</button></div></div>`;
   }
   const dateTxt=M.date?new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):'';
-  let h=`<div class="plantitle"><div class="pt">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div>${M.selName?`<div class="small" style="margin-top:2px">📁 <b>${esc(M.selName)}</b></div>`:''}</div>`;
+  let h=`<div class="plantitle"><div class="pt">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div>${timesText(M)?`<div class="small" style="font-weight:700;margin-top:2px">${esc(timesText(M))}</div>`:''}${M.selName?`<div class="small" style="margin-top:2px">📁 <b>${esc(M.selName)}</b></div>`:''}</div>`;
   h+=`<div class="card" style="padding:10px 14px"><div class="lbl">Team size</div>
     <div class="seg">${[7,9,11,13,15].map(n=>`<button class="${M.size===n?'on':''}" data-a="size" data-v="${n}">${n}</button>`).join('')}</div>${formationControl()}</div>`;
   const subsN=P.timeline.reduce((a,e)=>a+e.items.filter(i=>i.kind==='sub'||i.kind==='fill').length,0);
@@ -1037,7 +1055,7 @@ function planView(){
   const selKey=ui.sel?(ui.sel.slot!=null?'s'+ui.sel.slot:'p'+ui.sel.pid):'';
   h+=`<div class="row" style="margin-top:12px"><div class="seg grow">${P.periods.map((x,i)=>`<button class="${i===vi?'on':''}" data-a="view" data-v="${i}">${periodName(i,x.a,x.b,M)}</button>`).join('')}</div></div>`;
   h+=`<div class="hint">${ui.sel?'Now tap another position or a bench player to swap · tap again to cancel':(P.plan?'Tap a player, then another, to swap — or press and hold to drag. Changes apply from '+(vi===0?'the start':periodName(vi,pr.a,pr.b,M))+' on.':'Press 🪄 for a starting selection, then tweak it by hand.')}</div>`;
-  h+=`<div class="pitch"><div class="pitchbar"><button class="pbtn wand" data-a="wand" aria-label="Suggest team" title="${P.plan?'New automatic selection':'Fill the team automatically'}">🪄${P.plan?'':' <span>Suggest team</span>'}</button><span class="sp"></span>
+  h+=`<div class="pitch"><div class="pitchbar"><button class="pbtn wand" data-a="wand" aria-label="${P.plan?'Re-shuffle':'Suggest team'}" title="${P.plan?'New automatic selection':'Fill the team automatically'}">🪄 <span>${P.plan?'Re-shuffle':'Suggest team'}</span></button><span class="sp"></span>
     <button class="pbtn" id="undoBtn" data-a="undo" title="Undo" aria-label="Undo" ${undoStack.length?'':'disabled'}>↶</button><button class="pbtn" id="redoBtn" data-a="redo" title="Redo" aria-label="Redo" ${redoStack.length?'':'disabled'}>↷</button></div>`;
   PM.lines.forEach(ln=>{
     h+=`<div class="lineTag">${ln.name}</div><div class="lineRow">`+ln.boxes.map(x=>
@@ -1057,7 +1075,7 @@ function planView(){
       if(it.kind==='fill')return `<div class="sw"><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> into #${it.slot.num} ${it.slot.label}</span></div>`;
       if(it.kind==='offonly')return `<div class="sw"><span class="txt"><span class="off-n">${esc(it.off.name)}</span> comes off — #${it.slot.num} ${it.slot.label} left empty</span></div>`;
       const key=e.t+'-'+it.on.id+'-'+it.off.id;const d=!!M.done[key];
-      return `<div class="sw ${d?'done':''}"><button class="tick ${d?'on':''}" data-a="done" data-v="${key}" aria-label="Done">${d?'✓':''}</button><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}</span></span></div>`;
+      return `<div class="sw tickrow ${d?'done':''}" data-a="done" data-v="${key}" role="button" aria-label="Mark this sub done"><span class="tick ${d?'on':''}">${d?'✓':''}</span><span class="txt"><span class="on-n">▲ ${esc(it.on.name)}</span> for <span class="off-n">${esc(it.off.name)}</span><br><span class="small muted">#${it.slot.num} ${it.slot.label}</span></span></div>`;
     }).join('')||`<div class="sw"><span class="txt muted small">No change</span></div>`;
     return `<li><div class="t">${minLabel(e.t,M)}${e.t===M.half?'<small>'+fm(e.t)+"'</small>":''}${isQuarters(M)&&e.t!==M.half?'<small>'+(e.t<M.half?'Q2':'Q4')+'</small>':''}</div><div class="grow">${items}</div></li>`;
   }).join('')+'</ul>';
@@ -1080,8 +1098,9 @@ function sheetView(){
     const M=state.match,list=loadSaves();
     body=`<div class="card" style="margin:0 0 10px;background:#f6f8f3">
       <div class="small muted">Working on</div><div style="font-weight:700;margin-bottom:8px">${M.selName?esc(M.selName):'An unsaved plan'}</div>
-      ${M.selId&&list.some(x=>x.id===M.selId)?`<button class="btn wide" data-a="saveSame" style="margin-bottom:8px">Save changes to “${esc(M.selName)}”</button>`:''}
-      <div class="row"><input type="text" data-f="saveName" placeholder="Name, e.g. Plan A – strong start" value="${esc(ui.saveName||'')}" class="grow" style="flex:1"><button class="btn alt" data-a="saveNew">Save as new</button></div></div>
+      ${!canSave()?'<p class="small" style="margin:0 0 8px;color:#7a5200">Nothing to save yet — tick who\'s here or press 🪄 first.</p>':''}
+      ${M.selId&&list.some(x=>x.id===M.selId)?`<button class="btn wide" data-a="saveSame" ${canSave()?'':'disabled'} style="margin-bottom:8px">Save changes to “${esc(M.selName)}”</button>`:''}
+      <div class="row"><input type="text" data-f="saveName" placeholder="Name, e.g. Plan A – strong start" value="${esc(ui.saveName||'')}" class="grow" style="flex:1"><button class="btn alt" data-a="saveNew" ${canSave()?'':'disabled'}>Save as new</button></div></div>
       ${list.length?'':'<p class="small muted">Nothing saved yet. Saved plans stay on this phone.</p>'}
       <ul class="plist">${list.map(e=>{const m=e.match||{};const here=Object.keys(m.present||{}).length;
         return `<li><div class="prow"><span class="grow" style="min-width:0"><span class="nm" style="display:block">${esc(e.name)}${e.id===M.selId?' <span class="tag">open</span>':''}${e.auto?' <span class="tag" style="background:#eceee9;color:#7a857c">auto</span>':''}</span>
@@ -1089,6 +1108,8 @@ function sheetView(){
           ${ui.delSave===e.id?`<button class="btn warn sm" data-a="delSaveYes" data-v="${e.id}">Delete</button><button class="btn alt sm" data-a="delSaveNo">Keep</button>`
             :`<button class="btn sm" data-a="openSave" data-v="${e.id}">Open</button><button class="iconbtn" data-a="delSave" data-v="${e.id}" aria-label="Delete">🗑</button>`}</div></li>`;}).join('')}</ul>
       <p class="small muted">Saved on this phone only. Before 🪄, opening a plan or starting a new match, your current plan is auto-saved (last 5 kept). ↶ also undoes opening a plan.</p>
+      <div class="card" style="margin:12px 0 10px;background:#fff6f3"><b>New match</b><p class="small muted" style="margin:4px 0 8px">Clears who's here, B/🔒 marks, late/injured, times, ticks and the plan. Keeps the panel, settings and saved plans. Your current plan is auto-saved first.</p>
+        ${ui.confirmReset?`<div class="row"><span class="grow small">Clear everything for a new match?</span><button class="btn alt sm" data-a="resetNo">Cancel</button><button class="btn warn sm" data-a="resetYes">Clear</button></div>`:`<button class="btn alt" data-a="reset">Start a new match</button>`}</div>
       <button class="btn alt wide" data-a="sheetClose">Close</button>`;
   }else if(S.mode==='image'){
     const canShare=!!(ui.imgFile&&navigator.canShare&&navigator.canShare({files:[ui.imgFile]}));
@@ -1214,8 +1235,8 @@ function parseRSVP(text){
   const people=rows.slice(hi+1).filter(r=>r[0]&&r[0].trim()&&(ti<0||!r[ti]||/player/i.test(r[ti]))).map(r=>({name:cleanName(r[0]),resp:respCode(r[ri]||'')}));
   let date='';const dm=start.match(/([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})/);
   if(dm){const mi=MONTHS.findIndex(x=>x.startsWith(dm[1].toLowerCase().slice(0,3)));if(mi>=0)date=`${dm[3]}-${String(mi+1).padStart(2,'0')}-${String(dm[2]).padStart(2,'0')}`;}
-  const om=event.match(/\bv(?:s)?\.?\s+(.+)$/i);
-  return {event,opp:om?om[1].trim():'',date,people};
+  const om=event.match(/\bv(?:s)?\.?\s+(.+)$/i);const tm=start.match(/(\d{1,2}):(\d{2})/);
+  return {event,opp:om?om[1].trim():'',date,time:tm?tm[1].padStart(2,'0')+':'+tm[2]:'',people};
 }
 function findOrAdd(name,added){
   const n=normName(name);let p=state.panel.players.find(x=>normName(x.name)===n);
@@ -1232,7 +1253,7 @@ function applyRSVP(r,toMatch){
   Object.keys(ids).forEach(id=>{if(ids[id]==='A')M.present[id]=true;});
   ['anchor','lock','sitOut','late','injured'].forEach(k=>Object.keys(M[k]).forEach(id=>{if(!M.present[id])delete M[k][id];}));
   M.moves=[];M.done={};
-  if(r.opp)M.opp=r.opp;if(r.date)M.date=r.date;
+  if(r.opp)M.opp=r.opp;if(r.date)M.date=r.date;if(r.time){M.throwIn=r.time;if(M.meetAuto)M.meetUp=addMins(r.time,-30);}
   persist('match');
   const c=k=>Object.values(ids).filter(v=>v===k).length;
   return `<b>${c('A')} attending</b> ticked · ${c('N')} not replied · ${c('X')} not coming.`+(added.length?` Added ${added.length} new to the panel (${added.map(p=>esc(p.name)).join(', ')}) — set their positions on the Panel tab.`:'')+' Tick or untick on the day as needed.';
@@ -1244,6 +1265,7 @@ function whatsappText(){
   const M=state.match,P=derive();
   const L=[];
   L.push(`📋 ${M.opp?'vs '+M.opp:'Match plan'}${M.date?' – '+new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):''}`);
+  if(timesText(M))L.push(timesText(M));
   L.push(`${P.slots.length}-a-side · 2×${M.half} mins · ${P.present.length} here`);
   L.push('');L.push('*STARTING*');
   LINES.forEach((l,li)=>{const ss=P.slots.filter(s=>s.line===li);if(!ss.length)return;
@@ -1422,13 +1444,13 @@ function act(a,el){
     case 'timing':ui.timing=ui.timing===id?null:id;ui.offFor=null;break;
     case 'reset':ui.confirmReset=true;break;
     case 'resetNo':ui.confirmReset=false;break;
-    case 'resetYes':autoSave('before new match');Object.assign(M,{selName:'',selId:'',present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},plan:null,opp:'',date:''});ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
+    case 'resetYes':autoSave('before new match');Object.assign(M,{selName:'',selId:'',present:{},anchor:{},lock:{},sitOut:{},benchStart:{},late:{},injured:{},done:{},moves:[],rsvp:{},plan:null,opp:'',date:'',throwIn:'',meetUp:'',meetAuto:true});ui.sheet=null;ui.tab='match';ui.rsvpMsg='';ui.confirmReset=false;persist('match');toast('Ready for a new match');break;
     case 'shuffle':M.seed=(M.seed%9973)+1;M.done={};M.moves=[];ui.sel=null;persist('match');toast('New combination');break;
     case 'view':ui.view=+v;ui.sel=null;break;
-    case 'plans':ui.saveName='';ui.delSave=null;ui.sheet={mode:'plans',title:'Plans for this match',note:''};break;
-    case 'saveNew':{const nm=(ui.saveName||'').trim()||('Plan '+(loadSaves().filter(x=>!x.auto).length+1));
+    case 'plans':ui.saveName='';ui.delSave=null;ui.confirmReset=false;ui.sheet={mode:'plans',title:'Saved plans',note:''};break;
+    case 'saveNew':{if(!canSave())break;const nm=(ui.saveName||'').trim()||('Plan '+(loadSaves().filter(x=>!x.auto).length+1));
       const e=saveSelection(nm);if(!e)break;M.selName=nm;M.selId=e.id;if(!saveSelection(nm,{id:e.id}))break;persist('match');ui.saveName='';toast('Saved “'+nm+'”');break;}
-    case 'saveSame':if(saveSelection(M.selName,{id:M.selId}))toast('Saved');break;
+    case 'saveSame':if(canSave()&&saveSelection(M.selName,{id:M.selId}))toast('Saved');break;
     case 'openSave':openSaved(v);break;
     case 'delSave':ui.delSave=v;break;
     case 'delSaveNo':ui.delSave=null;break;
@@ -1492,6 +1514,8 @@ document.addEventListener('change',e=>{const before=snap();onChange(e);if(!/^rsv
 function onChange(e){
   const el=e.target;const f=el.dataset&&el.dataset.f;if(!f)return;const M=state.match,id=el.dataset.id;
   if(f==='date'){M.date=el.value;persist('match');render();}
+  else if(f==='throwIn'){M.throwIn=el.value||'';if(M.meetAuto)M.meetUp=addMins(M.throwIn,-30);persist('match');render();}
+  else if(f==='meetUp'){M.meetUp=el.value||'';M.meetAuto=!M.meetUp;if(M.meetAuto)M.meetUp=addMins(M.throwIn,-30);persist('match');render();}
   else if(f==='rsvpPanel'||f==='rsvpMatch'){readFile(el,txt=>{const r=parseRSVP(txt);
     if(!r||!r.people.length){toast("That doesn't look like a ClubZap RSVP report");return;}
     if(f==='rsvpPanel')ui.panelMsg=applyRSVP(r,false);else ui.rsvpMsg=applyRSVP(r,true);render();});}
