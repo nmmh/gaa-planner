@@ -133,6 +133,7 @@ textarea{min-height:120px;resize:vertical}
 .pbtn.wand{background:var(--accent);color:var(--accent-ink)}
 .pbtn:disabled{opacity:.35;box-shadow:none}
 .nobody{color:rgba(255,255,255,.7);font-size:13px}
+.rotline{background:#eef3f9;color:#24456f;border-radius:10px;padding:8px 10px;margin:-2px 0 8px}
 .tl{list-style:none;margin:0;padding:0}
 .tl > li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .tl > li:first-child{border-top:0}
@@ -182,7 +183,7 @@ const LINES=[
 const DEFAULT_FORM={7:[1,2,1,1,1,1],9:[1,2,2,1,2,1],11:[1,2,2,2,2,2],13:[1,3,2,2,2,3],15:[1,3,3,2,3,3]};
 const PRESETS={15:['1-3-3-2-3-3','1-3-3-3-3-2'],13:['1-3-2-2-2-3','1-2-3-2-3-2','1-3-3-2-2-2'],11:['1-2-2-2-2-2','1-2-3-1-3-1'],9:['1-2-2-1-2-1'],7:['1-2-1-1-1-1']};
 const SIDES={L:'Left',R:'Right',E:'Either'};
-const APP_VERSION='v0.8',REPO_URL='https://github.com/nmmh/gaa-planner';
+const APP_VERSION='v0.9',REPO_URL='https://github.com/nmmh/gaa-planner';
 let commitInfo=null;
 function verHtml(){
   const help=`<a href="${REPO_URL}/blob/main/help.md" target="_blank" rel="noopener"><b>Help</b></a>`;
@@ -284,8 +285,18 @@ function buildSlots(form){
 }
 
 /* ---------- starting team ---------- */
+// B = rotation players. They share the bench places; everyone unmarked plays the whole match.
+// If no more players are marked B than there are bench places, B falls back to "starts on the bench"
+// and everyone rotates, so nobody is left on the bench all match.
+function rotationRule(M,present,slotsN){
+  const avail=present.filter(p=>{const v=M.injured[p.id];return v===undefined||v===null||v===''||+v>0;});
+  const benchN=Math.max(0,avail.length-slotsN),B=avail.filter(p=>M.benchStart[p.id]);
+  const active=benchN>0&&B.length>benchN,fallback=B.length>0&&B.length<=benchN;
+  const core={};if(active)avail.forEach(p=>{if(!M.benchStart[p.id])core[p.id]=true;});
+  return {benchN,bN:B.length,active,fallback,core};
+}
 function pickStarters(avail,slots,M){
-  const pri=p=>M.benchStart[p.id]?-1000:0;
+  const pri=p=>M.anchor[p.id]?1000:M.benchStart[p.id]?-1000:0;
   const val=(p,s)=>fit(p,s)+pri(p)+hash(M.seed+':'+p.id+':start')*2.5;
   const assign=new Array(slots.length).fill(null);const used=new Set();
   for(let k=0;k<slots.length;k++){
@@ -313,9 +324,12 @@ const sitsOut=(M,id,i)=>!!(M.sitOut[id]&&M.sitOut[id][i]);
 const hasPlan=(M,id)=>!!(M.sitOut[id]&&Object.keys(M.sitOut[id]).length);
 /* ---------- match simulation ---------- */
 function simulate(){
-  const M=state.match,all=state.panel.players;
-  const slots=buildSlots(M.form);const T=M.half*2;
-  const present=all.filter(p=>M.present[p.id]);
+  const M0=state.match,all=state.panel.players;
+  const slots=buildSlots(M0.form);const T=M0.half*2;
+  const present=all.filter(p=>M0.present[p.id]);
+  // the wand works on a copy where unmarked players are "core" when B rotation applies
+  const R=rotationRule(M0,present,slots.length);
+  const M=Object.assign({},M0,{anchor:R.core,benchStart:R.fallback?M0.benchStart:{}});
   const lateAt=id=>Math.max(0,Math.round(+M.late[id]||0));
   const injAt=id=>{const v=M.injured[id];return(v===undefined||v===null||v==='')?null:Math.max(0,Math.round(+v));};
   const nz=(id,salt)=>hash(M.seed+':'+id+':'+salt);
@@ -512,7 +526,7 @@ function simulate(){
     if(playing.length)warnings.push(`${nm}: too many picked to sit out, so ${playing.map(p=>esc(shortName(p.name))).join(', ')} still play${playing.length===1?'s':''}.`);
     if(sitting.length)warnings.push(`${nm}: not enough positions for everyone you planned to play, so ${sitting.map(p=>esc(shortName(p.name))).join(', ')} sit${sitting.length===1?'s':''} out too.`);
   });
-  return {moveBad,bounds,periods,slots,starters,field,hist,timeline,mins,present,st,used,T,warnings,avail0,windows,lateAt,injAt};
+  return {eff:M,rule:R,moveBad,bounds,periods,slots,starters,field,hist,timeline,mins,present,st,used,T,warnings,avail0,windows,lateAt,injAt};
 }
 
 /* ---------- stored line-ups (filled by the wand, then edited by hand) ---------- */
@@ -589,6 +603,9 @@ function derive(){
   const avail0=present.filter(p=>lateAt(p.id)===0&&!(injAt(p.id)!==null&&injAt(p.id)<=0));
   const starters=L[0];
   if(present.length){
+    const R=rotationRule(M,present,slots.length);
+    if(R.fallback)warnings.push(`${R.bN} marked B but ${R.benchN} must sit out each period, so B players start on the bench and everyone rotates. Mark more than ${R.benchN} as B to choose who shares the bench.`);
+    if(plan&&R.active){const low=present.filter(p=>M.benchStart[p.id]&&mins[p.id]<T/2);if(low.length)warnings.push(`B players under half a match: ${low.map(p=>esc(shortName(p.name))+' '+fm(mins[p.id])+"'").join(', ')}. Mark more players B to share it out.`);}
     if(!present.some(p=>(p.lines||[]).includes(0)))warnings.push('Nobody here is listed as a goalkeeper.');
     if(plan){const never=present.filter(p=>!mins[p.id]&&!(injAt(p.id)!==null&&injAt(p.id)<=0));if(never.length)warnings.push(`Doesn't get on: ${never.map(p=>esc(shortName(p.name))).join(', ')}.`);
       const subs=timeline.reduce((n,e)=>n+e.items.filter(i=>i.kind==='sub'||i.kind==='fill').length,0);
@@ -601,7 +618,7 @@ function wand(){
   const M=state.match;if(M.plan){autoSave('before 🪄');M.seed=(M.seed%9973)+1;}
   M.moves=[];const P=simulate();
   const L=P.periods.map(pr=>pr.at.map(x=>x?x.p.id:null));
-  if(M.equal)balancePlan(L,P.bounds,P.slots,M,P.present);
+  if(M.equal)balancePlan(L,P.bounds,P.slots,P.eff,P.present);
   M.plan={form:M.form.join('-'),bounds:P.bounds,lineups:L};
   M.done={};persist('match');
 }
@@ -615,9 +632,9 @@ function balancePlan(L,bounds,slots,M,present){
     const m={};present.forEach(p=>m[p.id]=0);L.forEach((lu,i)=>lu.forEach(id=>{if(id&&m[id]!==undefined)m[id]+=len[i];}));
     let best=null;
     L.forEach((lu,i)=>{
-      const off=present.filter(p=>!lu.includes(p.id)&&avail(p.id,i)&&!(i===0&&M.benchStart[p.id]));
+      const off=present.filter(p=>!lu.includes(p.id)&&avail(p.id,i)&&!(i===0&&M.benchStart[p.id])&&!M.anchor[p.id]);
       lu.forEach((x,si)=>{
-        if(!x||!byId[x]||slots[si].line===0)return;
+        if(!x||!byId[x]||slots[si].line===0||M.anchor[x])return;
         off.forEach(y=>{
           if(M.lock[y.id]){const h=home(y.id);if(h>=0&&h!==si)return;}
           const gain=m[x]-m[y.id]-len[i];if(gain<=0.01)return;
@@ -781,7 +798,7 @@ async function flush(which){
 function setSync(s){if(ui.sync===s)return;ui.sync=s;const el=$('#sync');if(el)el.outerHTML=syncPill();}
 function syncPill(){
   const m={local:['','On this phone'],live:['live','● Shared live'],readonly:['warn','View only'],error:['warn','Not syncing'],loading:['','Connecting…']}[ui.sync]||['',''];
-  return `<span id="sync" class="pill ${m[0]}">${m[1]}</span>`;
+  if(!m[1]||ui.sync==='local')return '<span id="sync"></span>';return `<span id="sync" class="pill ${m[0]}">${m[1]}</span>`;
 }
 async function initDb(){
   if(!window.claude||typeof window.claude.use!=='function')return;
@@ -890,6 +907,16 @@ function panelView(){
   return h+'</div>';
 }
 
+function rotationLine(M,ps){
+  const present=ps.filter(p=>M.present[p.id]);if(!present.length)return '';
+  const R=rotationRule(M,present,buildSlots(M.form).length);
+  let t;
+  if(!R.benchN)t=`${present.length} here for ${buildSlots(M.form).length} places — nobody needs to sit out.`;
+  else if(R.active){const each=1-R.benchN/R.bN;t=`<b>${R.bN} B players share ${R.benchN} bench place${R.benchN>1?'s':''}</b> — about ${Math.round(each*100)}% of the match each. Everyone else plays it all.`;}
+  else if(R.fallback)t=`${R.benchN} must sit out each period. With ${R.bN} marked B they start on the bench and <b>everyone rotates</b> — mark more than ${R.benchN} to choose who shares the bench.`;
+  else t=`${R.benchN} must sit out each period. No B marked, so <b>everyone rotates</b>. Mark B on the players who should share the bench.`;
+  return `<div class="rotline small">${t}</div>`;
+}
 function rsvpTag(c){return c==='A'?'<span class="tag" style="background:#dff2e5;color:#17663a">RSVP ✓</span>':c==='X'?'<span class="tag" style="background:#fbe1dc;color:#a8321f">not coming</span>':'<span class="tag" style="background:#eceee9;color:#7a857c">no reply</span>';}
 function stepper(act,val,extra){return `<div class="stepper"><button data-a="${act}" data-v="-1" ${extra||''}>−</button><span>${val}</span><button data-a="${act}" data-v="1" ${extra||''}>+</button></div>`;}
 
@@ -932,7 +959,7 @@ function matchView(){
         <button class="btn wide" style="margin-top:8px" data-a="availApply">Tick these players</button>
         ${ui.availMsg?`<div class="warnbox" style="margin-bottom:0">${ui.availMsg}</div>`:''}
       </details>
-      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. <b>B</b> sub — starts on the bench · <b>🔒</b> stays in one position · <b>⏱</b> late or injured. These guide the 🪄 wand on the Plan tab.</p>`;
+      <p class="small muted" style="margin:-4px 0 6px">Tick who turned up. <b>B</b> rotation player — shares the bench time · <b>🔒</b> stays in one position · <b>⏱</b> late or injured. These guide the 🪄 wand on the Plan tab.</p>${rotationLine(M,ps)}`;
   if(!ps.length)h+=`<div class="empty-state">Add players on the Panel tab first.</div>`;
   const pl=periodList(M);
   ps.forEach(p=>{
@@ -940,7 +967,7 @@ function matchView(){
     const timed=M.late[p.id]||(M.injured[p.id]!==undefined&&M.injured[p.id]!=='');
     h+=`<div class="att ${on?'':'absent'}"><button class="who" data-a="present" data-id="${p.id}"><span class="tick ${on?'on':''}">${on?'✓':''}</span><span class="grow" style="min-width:0"><span class="nm" style="display:block">${esc(p.name)}</span>${on||M.rsvp[p.id]?`<span class="small" style="display:block;margin-top:2px">${M.rsvp[p.id]?rsvpTag(M.rsvp[p.id])+' ':''}${on?posTags(p):''}</span>`:''}</span></button>
       ${on?`
-      <button class="iconbtn ${M.benchStart[p.id]?'on2':''}" data-a="bench" data-id="${p.id}" aria-label="Sub: starts on the bench">B</button>
+      <button class="iconbtn ${M.benchStart[p.id]?'on2':''}" data-a="bench" data-id="${p.id}" aria-label="Rotation player: shares the bench time">B</button>
       <button class="iconbtn ${M.lock[p.id]?'on4':''}" data-a="lock" data-id="${p.id}" aria-label="Stays in one position">🔒</button>
       <button class="iconbtn ${timed?'on3':''}" data-a="timing" data-id="${p.id}" aria-label="Late or injured">⏱</button>`:''}</div>`;
     if(on&&ui.timing===p.id){
@@ -962,7 +989,7 @@ function planView(){
   }
   const dateTxt=M.date?new Date(M.date+'T12:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):'';
   let h=`<div class="row" style="margin:6px 0 2px"><div class="grow"><div style="font-family:'Barlow Condensed';font-size:22px;line-height:1.1">${M.opp?'vs '+esc(M.opp):'Match plan'}</div><div class="small muted">${dateTxt?esc(dateTxt)+' · ':''}${P.slots.length}-a-side · 2×${M.half} mins</div>${M.selName?`<div class="small" style="margin-top:2px">📁 <b>${esc(M.selName)}</b></div>`:''}</div>
-    <button class="btn alt sm" data-a="plans" title="Saved selections">📁 Plans</button><button class="btn sm" data-a="image" title="Share the pitch as a picture">📷 Image</button></div>`;
+    <button class="btn alt sm" data-a="plans" title="Saved selections">📁 Plans</button></div>`;
   h+=`<div class="card" style="padding:10px 14px"><div class="lbl">Team size</div>
     <div class="seg">${[7,9,11,13,15].map(n=>`<button class="${M.size===n?'on':''}" data-a="size" data-v="${n}">${n}</button>`).join('')}</div>${formationControl()}</div>`;
   const subsN=P.timeline.reduce((a,e)=>a+e.items.filter(i=>i.kind==='sub'||i.kind==='fill').length,0);

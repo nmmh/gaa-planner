@@ -15,7 +15,7 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
 ## The process
 
 1. **Panel tab:** define your panel. For each player choose where they usually play and whether they're a left- or right-sided player.
-2. **Here today tab:** set up the match. Tick who's here, set the half length and change times, and mark subs (**B**) and players who stay in one position (**🔒**).
+2. **Here today tab:** set up the match. Tick who's here, set the half length and change times, and mark rotation players (**B**) and players who stay in one position (**🔒**).
 3. **Plan tab:** press the **🪄 wand** for a starting selection across the whole match.
 4. **Tweak by hand:** swap players to get the team you want. Use **↶ undo** and **↷ redo** if you change your mind.
 5. **Share:** send the pitch as a picture, or send your plan to another mentor's phone.
@@ -39,7 +39,13 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
 - **Subs allowed** is **No limit** by default. Choose **Set a limit** if your competition caps substitutions.
 - **Who's here:** tick players as they arrive. **Load ClubZap RSVP report** the night before ticks everyone who said they're attending and marks the rest "no reply". Adjust it on the day.
 - For each player who's here:
-  - **B**: a sub. They start on the bench.
+  - **B**: a rotation player. B players share the bench time, and everyone not marked B plays the whole match.
+    - Example: 14 here for 13 places with changes each quarter, so one player sits out each quarter. Mark 4 players B and each sits out one quarter (37½ minutes each). Mark 3 and one of them sits out twice. Mark 2 and they get half a match each.
+    - Include your sub(s) when you mark B. An unmarked sub plays the whole match, and a B player starts on the bench instead.
+    - If you mark no more B players than there are bench places, B players start on the bench and everyone rotates, so nobody sits out all match. The page tells you when this happens.
+    - Mark nobody and everyone rotates.
+    - A line under the instructions shows how many B players are sharing how many bench places.
+    - When a B player comes on, they take the position of the B player going off. Choose B players who can cover each other's positions, or lock (🔒) the ones who must stay put.
   - **🔒**: stays in one position for the whole match. When they come back on, they go back to the same spot.
   - **⏱**: arrives late, or went off injured at a given minute.
 - **Start a new match** clears the ticks, marks and plan. It keeps your panel and settings.
@@ -51,7 +57,7 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
 - **🪄 wand** (top left of the pitch) fills in the whole match automatically:
   - It evens out minutes.
   - It keeps 🔒 players in their positions.
-  - It starts **B** players on the bench.
+  - It rotates only the **B** players when you've marked more B players than there are bench places. Everyone else plays the whole match.
   - It works around late arrivals and injuries.
   - Press it again for a different selection. ↶ takes you back.
   - Nothing moves automatically until you press the wand.
@@ -64,7 +70,7 @@ Everything is saved on your own phone. Nothing is uploaded unless you send a lin
 
 ## 4. Sharing
 
-- **📷 Image** (Plan tab) makes a picture of the pitch exactly as it shows on screen for the period you're looking at. It includes the opposition, date, team size and match length at the top, and every box with any subs or position changes underneath the player's name. The bench is included; the 🪄 and ↶ ↷ buttons are left out. Share it straight to WhatsApp. It's view-only, so it never changes anyone else's plan.
+- **Pitch as a picture** (in the share menu, top right) makes a picture of the pitch exactly as it shows on screen for the period you're looking at. It includes the opposition, date, team size and match length at the top, and every box with any subs or position changes underneath the player's name. The bench is included; the 🪄 and ↶ ↷ buttons are left out. Share it straight to WhatsApp. It's view-only, so it never changes anyone else's plan.
   - On **Q1**, each box lists every later change, such as "Q3 Fionn Ryan". That one picture explains the whole plan.
   - Pick another period above the pitch first to picture the team at that point, which is handy at half-time.
 - The **share button** (top right of the page) also has:
